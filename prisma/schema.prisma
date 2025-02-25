@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,55 +8,53 @@ datasource db {
 }
 
 model User {
-  user_id          Int       @id @default(autoincrement())
-  email            String    @unique
+  user_id          Int            @id @default(autoincrement())
+  email            String         @unique
   password         String
   role             Role
   fcmToken         String?
-  isVerified       Boolean   @default(false)
+  isVerified       Boolean        @default(false)
   verificationCode String?
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
   deleted_at       DateTime?
-
-  Profile        Profile?
-  TeacherClasses Class[]        @relation("UserToClass")
-  StudentClasses StudentClass[]
-  Subjects       Subject[]
-  Assignments    Assignment[]
-  Submissions    Submission[]
-  Grades         Grade[]
-  Comments       Comment[]
-  Notifications  Notification[]
-  FileStorages   FileStorage[]
+  Assignments      Assignment[]
+  TeacherClasses   Class[]        @relation("UserToClass")
+  Comments         Comment[]
+  FileStorages     FileStorage[]
+  Grades           Grade[]
+  Notifications    Notification[]
+  Profile          Profile?
+  StudentClasses   StudentClass[]
+  Subjects         Subject[]
+  Submissions      Submission[]
 }
 
 model Profile {
   profile_id      Int       @id @default(autoincrement())
   user_id         Int       @unique
+  name            String    @db.VarChar(100)
   foto_profile    String?
   bio             String?
   identity_number String    @unique
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
   deleted_at      DateTime?
-
-  User User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  User            User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 }
 
 model Class {
-  class_id   Int       @id @default(autoincrement())
-  school_id  Int
-  class_name String
-  teacher_id Int?
-  status     Status
-  created_at DateTime  @default(now())
-  updated_at DateTime  @updatedAt
-  deleted_at DateTime?
-
-  Teacher        User?          @relation("UserToClass", fields: [teacher_id], references: [user_id], onDelete: SetNull)
-  StudentClasses StudentClass[]
+  class_id       Int            @id @default(autoincrement())
+  school_id      Int
+  class_name     String
+  teacher_id     Int?
+  status         Status
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  deleted_at     DateTime?
   Assignments    Assignment[]
+  Teacher        User?          @relation("UserToClass", fields: [teacher_id], references: [user_id])
+  StudentClasses StudentClass[]
 }
 
 model StudentClass {
@@ -71,18 +63,16 @@ model StudentClass {
   student_id       Int
   status           Status
   joined_at        DateTime @default(now())
-
-  Class   Class @relation(fields: [class_id], references: [class_id])
-  Student User  @relation(fields: [student_id], references: [user_id])
+  Class            Class    @relation(fields: [class_id], references: [class_id])
+  Student          User     @relation(fields: [student_id], references: [user_id])
 }
 
 model Subject {
-  subject_id   Int    @id @default(autoincrement())
+  subject_id   Int          @id @default(autoincrement())
   subject_name String
   teacher_id   Int
-
-  Teacher     User         @relation(fields: [teacher_id], references: [user_id])
-  Assignments Assignment[]
+  Assignments  Assignment[]
+  Teacher      User         @relation(fields: [teacher_id], references: [user_id])
 }
 
 model Assignment {
@@ -97,12 +87,11 @@ model Assignment {
   created_at      DateTime       @default(now())
   updated_at      DateTime       @updatedAt
   deleted_at      DateTime?
-
-  Subject     Subject      @relation(fields: [subject_id], references: [subject_id])
-  Class       Class        @relation(fields: [class_id], references: [class_id])
-  Teacher     User         @relation(fields: [teacher_id], references: [user_id])
-  Submissions Submission[]
-  Comments    Comment[]
+  Class           Class          @relation(fields: [class_id], references: [class_id])
+  Subject         Subject        @relation(fields: [subject_id], references: [subject_id])
+  Teacher         User           @relation(fields: [teacher_id], references: [user_id])
+  Comments        Comment[]
+  Submissions     Submission[]
 }
 
 model Submission {
@@ -115,39 +104,36 @@ model Submission {
   created_at      DateTime         @default(now())
   updated_at      DateTime         @updatedAt
   deleted_at      DateTime?
-
-  Assignment Assignment @relation(fields: [assignment_id], references: [assignment_id])
-  Student    User       @relation(fields: [student_id], references: [user_id])
-  Grades     Grade[]
+  Grades          Grade[]
+  Assignment      Assignment       @relation(fields: [assignment_id], references: [assignment_id])
+  Student         User             @relation(fields: [student_id], references: [user_id])
 }
 
 model Grade {
-  grade_id      Int       @id @default(autoincrement())
+  grade_id      Int        @id @default(autoincrement())
   submission_id Int
   teacher_id    Int
-  score         Decimal   @db.Decimal(5, 2)
+  score         Decimal    @db.Decimal(5, 2)
   feedback      String?
   graded_date   DateTime
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
   deleted_at    DateTime?
-
-  Submission Submission @relation(fields: [submission_id], references: [submission_id])
-  Teacher    User       @relation(fields: [teacher_id], references: [user_id])
+  Submission    Submission @relation(fields: [submission_id], references: [submission_id])
+  Teacher       User       @relation(fields: [teacher_id], references: [user_id])
 }
 
 model Comment {
-  comment_id    Int       @id @default(autoincrement())
+  comment_id    Int        @id @default(autoincrement())
   user_id       Int
   assignment_id Int
   content       String
   comment_date  DateTime
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
   deleted_at    DateTime?
-
-  User       User       @relation(fields: [user_id], references: [user_id])
-  Assignment Assignment @relation(fields: [assignment_id], references: [assignment_id])
+  Assignment    Assignment @relation(fields: [assignment_id], references: [assignment_id])
+  User          User       @relation(fields: [user_id], references: [user_id])
 }
 
 model Notification {
@@ -159,8 +145,7 @@ model Notification {
   created_at      DateTime           @default(now())
   updated_at      DateTime           @updatedAt
   deleted_at      DateTime?
-
-  User User @relation(fields: [user_id], references: [user_id])
+  User            User               @relation(fields: [user_id], references: [user_id])
 }
 
 model FileStorage {
@@ -172,8 +157,7 @@ model FileStorage {
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
   deleted_at  DateTime?
-
-  User User @relation(fields: [user_id], references: [user_id])
+  User        User      @relation(fields: [user_id], references: [user_id])
 }
 
 enum Role {
