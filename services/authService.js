@@ -1,55 +1,106 @@
-const {PrismaClient} = require("@prisma/client");
-const prisma = new PrismaClient();
+const bcrypt = require("bcryptjs");
+const authRepository = require("../repositories/authRepository");
+const jwt = require("jsonwebtoken");
+const { throwError } = require("../utils/responeHandler");
+require("dotenv").config();
 
-const { hashPassword, comparePassword } = require("../utils/hashPassword");
+// Penyimpanan sementara untuk login attempts
+const loginAttempts = {};
 
-async function registerUser(email, password, role, name, identity_number) {
-    const exitingUser = await prisma.user.findUnique({ where: { email } });
-    if (exitingUser) throw new Error("Email sudah terdaftar");
+const generateAccessToken = (userId, role) => {
+  return jwt.sign({ id: userId, role: role }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+};
 
-    const hashedPassword = await hashPassword(password);
+const generateRefreshToken = (userId) => {
+  return jwt.sign({ id: userId }, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: "7d",
+  });
+};
 
-    const newUser = await prisma.user.create({
-        data: {
-            email,
-            password: hashedPassword,
-            role,
-            Profile: {
-                create: {
-                    name,
-                    identity_number: identity_number || "",
-                },
-            },
-    },
-    
-});
+const maxAttempts = 3;
+const lockoutTime = 10 * 60 * 1000;
 
-return newUser;
+const loginUser = async ({ email, password }) => {
+  if (!email || !password) {
+    throwError(400, "Email and password are required");
+  }
 
-}
+  if (!loginAttempts[email]) {
+    loginAttempts[email] = { attempts: 0, lastAttempt: Date.now() };
+  }
 
-async function loginUser(email, password) {
-    const user = await prisma.user.findUnique({where: {email}, include: {Profile: true}});
-    if (!user) throw new Error("User tidak ditemukan");
+  if (loginAttempts[email].attempts >= maxAttempts) {
+    const timeSinceLastAttempt = Date.now() - loginAttempts[email].lastAttempt;
+    console.log(`Waktu sejak percobaan terakhir: ${timeSinceLastAttempt / 1000} detik`);
 
-    const isMatch = await comparePassword(password, user.password);
-    if (!isMatch) throw new Error("Password salah");
+    if (timeSinceLastAttempt < lockoutTime) {
+      throwError(429, "Too many login attempts. Try again later.");
+    } else {
+      console.log("Lockout berakhir, reset login attempts.");
+      loginAttempts[email].attempts = 0;
+      loginAttempts[email].lastAttempt = Date.now();
+    }
+  }
 
-    return user;
-}
+  const user = await authRepository.findUserByEmail(email);
+  if (!user) {
+    loginAttempts[email].attempts++;
+    loginAttempts[email].lastAttempt = Date.now();
+    throwError(401, "Invalid email or password");
+  }
 
-async function resetPassword(email, newPassword) {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new Error("User tidak ditemukan");
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    loginAttempts[email].attempts++;
+    loginAttempts[email].lastAttempt = Date.now();
+    throwError(401, "Invalid email or password");
+  }
 
-    const hashedPassword = await hashPassword(newPassword);
+  delete loginAttempts[email];
 
-    await prisma.user.update({
-        where: { email },
-        data: { password: hashedPassword },
-    });
+  const accessToken = generateAccessToken(user.id, user.role);
+  let refreshToken = null;
 
-    return "Password berhasil direset";
-}
+  if (user.role === "Admin") {
+    refreshToken = generateRefreshToken(user.id);
+    await authRepository.updateUserRefreshToken(user.id, refreshToken); // Save refresh token in DB
+  }
 
-module.exports = { registerUser, loginUser, resetPassword };
+  return { user, accessToken, refreshToken };
+};
+
+const logoutUser = async (userId) => {
+  await authRepository.updateUserRefreshToken(userId, null); // Hapus refresh token dari database
+  return { message: "Logout successful" };
+};
+
+const refreshAccessToken = async (refreshToken) => {
+  if (!refreshToken) {
+    throwError(401, "Refresh token is required");
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    const user = await authRepository.findUserById(decoded.id);
+
+    if (!user || user.refreshToken !== refreshToken) {
+      await authRepository.updateUserRefreshToken(decoded.id, null);
+      throwError(401, "Invalid refresh token");
+    }
+
+    // Buat access token baru
+    const newAccessToken = generateAccessToken(user);
+
+    return { accessToken: newAccessToken };
+  } catch (error) {
+    throwError(401, "Invalid or expired refresh token");
+  }
+};
+
+module.exports = {
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+};

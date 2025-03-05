@@ -1,55 +1,73 @@
 const authService = require("../services/authService");
+const { errorResponse, successResponse } = require("../utils/responeHandler");
+const authRepository = require("../repositories/authRepository")
 
-async function register(req, res) {
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const {user, accessToken, refreshToken} = await authService.loginUser({email, password});
+    console.log("Generated Access Token:", accessToken);
+
+    return successResponse(res, 200, "Login successfull", {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      accessToken,
+      refreshToken,
+    });
+
+  } catch (error) {
+    return errorResponse(
+      res,
+      error.status || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+};
+
+const logoutUser = async (req, res) => {
     try {
-        const { email, password, role, name, identity_number } = req.body;
+      const userId = req.user.id;
 
-        if (!email || !password || !role || !name) {
-            return res.status(400).json({ error: "Semua field wajib diisi" });
-        }
+      const result = await authService.logoutUser(userId);
 
-        const user = await authService.registerUser(email, password, role, name, identity_number);
-        res.status(201).json({ message: "Registrasi berhasil", user });
+      await authRepository.deleteRefreshToken(userId);
+      console.log(`Refresh token has been cleared for user ID: ${userId}`);
+
+      res.json(result);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+      res.status(error.statusCode || 500).json({ message: error.message });
     }
-}
+  };
 
-async function login(req, res) {
-    try {
-        const { email, password } = req.body;
-        console.log("Request body:", req.body);
-
-        // Validasi input
-        if (!email || !password) {
-            return res.status(400).json({ error: "Email dan password wajib diisi" });
-        }
-
-        // Gunakan authService.loginUser agar kode lebih bersih
-        const user = await authService.loginUser(email, password);
-        if (!user) {
-            return res.status(400).json({ error: "Email atau password salah" });
-        }
-
-        res.json({ message: "Login berhasil", user });
-    } catch (error) {
-        res.status(500).json({ error: "Terjadi kesalahan", detail: error.message });
+const refreshToken = (req, res) => {
+    const { refreshToken } = req.body;
+  
+    if (!refreshToken) {
+      return res.status(401).json({ error: "Refresh token is required" });
     }
-}
-
-async function resetPassword(req, res) {
-    try {
-        const { email, newPassword } = req.body;
-
-        if (!email || !newPassword) {
-            return res.status(400).json({ error: "Email dan password baru wajib diisi" });
-        }
-
-        const message = await authService.resetPassword(email, newPassword);
-        res.status(200).json({ message });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+  
+    // Decode and verify refresh token
+    const decoded = verifyRefreshToken(refreshToken);
+  
+    if (!decoded) {
+      return res.status(403).json({ error: "Forbidden: Invalid refresh token" });
     }
-}
+  
+    // Ensure that only admin can refresh the token
+    if (decoded.role !== 'Admin') {
+      return res.status(403).json({ error: "Forbidden: Only admin can refresh token" });
+    }
+  
+    const newAccessToken = generateAccessToken(decoded.id, decoded.role);
+    
+    res.json({ accessToken: newAccessToken });
+  };
 
-module.exports = { register, login, resetPassword };
+module.exports = {
+  loginUser,
+  logoutUser,
+  refreshToken,
+};
