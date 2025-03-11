@@ -1,4 +1,7 @@
 const classRepository = require("../repositories/classRepository");
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
+const { throwError } = require("../utils/responeHandler");
 
 const classService = {
   createClass: async (data) => {
@@ -22,12 +25,105 @@ const classService = {
   },
 
   addStudentToClass: async (classId, studentId) => {
-    return await classRepository.addStudentToClass(classId, studentId);
+    // Cek apakah kelas ada
+    const existingClass = await prisma.class.findUnique({
+      where: { id: Number(classId) },
+    });
+    if (!existingClass) {
+      throwError(404, "Class not found");
+    }
+
+    // Cek apakah murid sudah terdaftar di kelas mana pun dengan status "Active"
+    const activeStudent = await prisma.studentClass.findFirst({
+      where: {
+        studentId: Number(studentId),
+        status: "Active", // Hanya cek murid yang statusnya masih aktif
+      },
+    });
+
+    if (activeStudent) {
+      throwError(400, "Student is already assigned to another class. Deactivate the previous class first.");
+    }
+
+    // Cek apakah murid sudah ada dalam kelas ini (baik active atau inactive)
+    const existingStudent = await prisma.studentClass.findFirst({
+      where: { classId: Number(classId), studentId: Number(studentId) },
+    });
+
+    if (existingStudent) {
+      throwError(400, "Student is already in this class");
+    }
+
+    // Tambahkan murid ke kelas dengan status "Active"
+    return await prisma.studentClass.create({
+      data: {
+        classId: Number(classId),
+        studentId: Number(studentId),
+        status: "Active",
+      },
+    });
   },
 
   addTeacherToClass: async (classId, teacherId) => {
-    return await classRepository.addTeacherToClass(classId, teacherId);
+    // Cek apakah kelas ada
+    const existingClass = await prisma.class.findUnique({
+      where: { id: Number(classId) },
+    });
+    if (!existingClass) {
+      throwError(404, "Class not found");
+    }
+
+    // Cek apakah guru sudah ada dalam kelas
+    const existingTeacher = await prisma.teacherClass.findFirst({
+      where: { classId: Number(classId), teacherId: Number(teacherId) },
+    });
+
+    if (existingTeacher) {
+      throwError(400, "Teacher is already assigned to this class");
+    }
+
+    // Tambahkan guru ke kelas
+    return await prisma.teacherClass.create({
+      data: {
+        classId: Number(classId),
+        teacherId: Number(teacherId),
+      },
+    });
   },
+
+  deactivateStudentInClass: async (classId, studentId) => {
+    const result = await classRepository.deactivateStudentInClass(classId, studentId);
+    if (result.count === 0) {
+      throwError(400, "Student is either not in this class or already inactive.");
+    }
+
+    return { message: "Student has been deactivated from the class." };
+  },
+
+  getClassWithMembers: async (classId) => {
+    const classData = await classRepository.getClassDetails(classId);
+
+    if (!classData) {
+      throwError(404, "Class not found");
+    }
+    return {
+      id: classData.id,
+      className: classData.className,
+      status: classData.status,
+      students: classData.studentClasses.map((sc) => ({
+        id: sc.Student.id,
+        name: sc.Student.name,
+        email: sc.Student.email,
+        status: sc.status, // Menampilkan status Active/Inactive
+      })),
+      teachers: classData.teacherClasses.map((tc) => ({
+        id: tc.teacher.id,
+        name: tc.teacher.name,
+        email: tc.teacher.email,
+      })),
+    };
+  },
+
 };
 
 module.exports = classService;

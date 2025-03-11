@@ -8,26 +8,26 @@ datasource db {
 }
 
 model User {
-  id               Int            @id @default(autoincrement())
-  email            String         @unique
-  password         String
-  role             Role
-  fcmToken         String?
-  refreshToken     String?        @unique
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  deletedAt        DateTime?
-  username         String         @unique @db.VarChar(50)
-  Profile          Profile?
-  Assignments      Assignment[]
-  TeacherClasses   TeacherClass[]        
-  Comments         Comment[]
-  FileStorages     FileStorage[]
-  Grades           Grade[]
-  Notifications    Notification[]
-  StudentClasses   StudentClass[]
-  Subjects         Subject[]
-  Submissions      Submission[]
+  id             Int            @id @default(autoincrement())
+  username       String         @unique @db.VarChar(50)
+  email          String         @unique
+  password       String
+  role           Role
+  fcmToken       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+  refreshToken   String?        @unique
+  profile        Profile?
+  assignments    Assignment[]
+  comments       Comment[]
+  fileStorages   FileStorage[]
+  grades         Grade[]
+  notifications  Notification[]
+  studentClasses StudentClass[]
+  subjects       Subject[]
+  submissions    Submission[]
+  teacherClasses TeacherClass[]
 
   @@map("users")
 }
@@ -41,21 +41,20 @@ model Class {
   updatedAt      DateTime       @updatedAt
   deletedAt      DateTime?
   assignments    Assignment[]
-  teacherClasses TeacherClass[]         
   studentClasses StudentClass[]
+  teacherClasses TeacherClass[]
 
   @@map("classes")
 }
 
 model TeacherClass {
-  id       Int  @id @default(autoincrement())
+  id        Int   @id @default(autoincrement())
   teacherId Int
   classId   Int
+  class     Class @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher   User  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
-  teacher User @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  class   Class @relation(fields: [classId], references: [id], onDelete: Cascade)
-
-  @@unique([teacherId, classId]) 
+  @@unique([teacherId, classId])
   @@map("teacher_classes")
 }
 
@@ -74,9 +73,10 @@ model StudentClass {
 model Subject {
   id          Int          @id @default(autoincrement())
   subjectName String
-  teacherId   Int
+  teacherId   Int?
+  description String
   assignments Assignment[]
-  teacher     User         @relation(fields: [teacherId], references: [id])
+  users       User?        @relation(fields: [teacherId], references: [id])
 
   @@map("subjects")
 }
@@ -90,6 +90,7 @@ model Assignment {
   teacherId      Int
   deadline       DateTime
   assignmentType AssignmentType
+  taskCategory   TaskCategory
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   deletedAt      DateTime?
@@ -104,14 +105,15 @@ model Assignment {
 
 model Submission {
   id             Int              @id @default(autoincrement())
-  assignmentId   Int
-  studentId      Int
+  assignmentId   Int              
+  studentId      Int               
   fileUrl        String?
   submissionDate DateTime
   status         SubmissionStatus
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   deletedAt      DateTime?
+  comments       Comment[]
   grades         Grade[]
   assignment     Assignment       @relation(fields: [assignmentId], references: [id])
   student        User             @relation(fields: [studentId], references: [id])
@@ -136,16 +138,18 @@ model Grade {
 }
 
 model Comment {
-  id           Int        @id @default(autoincrement())
-  userId       Int
-  assignmentId Int
+  id           Int         @id @default(autoincrement())
+  userId         Int
+  submissionId   Int?
+  assignmentId   Int?
   content      String
-  commentDate  DateTime
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  commentDate  DateTime    @default(now())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
   deletedAt    DateTime?
-  assignment   Assignment @relation(fields: [assignmentId], references: [id])
-  user         User       @relation(fields: [userId], references: [id])
+  assignment   Assignment?  @relation(fields: [assignmentId], references: [id])
+  submission   Submission? @relation(fields: [submissionId], references: [id])
+  user         User        @relation(fields: [userId], references: [id])
 
   @@map("comments")
 }
@@ -216,4 +220,10 @@ enum SubmissionStatus {
 enum NotificationStatus {
   Unread
   Read
+}
+
+enum TaskCategory {
+  Essay
+  MultipleChoice
+  Project
 }

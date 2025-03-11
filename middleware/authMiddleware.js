@@ -13,17 +13,7 @@ const authenticate = (req, res, next) => {
   next();
 };
 
-// const authorizeAdmin = (req, res, next) => {
-//   console.log("User role in middleware:", req.user?.role);
-//   if (req.user.role !== "Admin") {
-//     return res
-//       .status(403)
-//       .json({ error: "Forbidden: Only admins can access this route" });
-//   }
-//   next();
-// };
-
-const roleMiddleware = (requiredRoles) => {
+const roleMiddleware = (...requiredRoles) => {
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ error: "Unauthorized" });
@@ -40,3 +30,13 @@ const roleMiddleware = (requiredRoles) => {
 };
 
 module.exports = { authenticate, roleMiddleware };
+
+// const authorizeAdmin = (req, res, next) => {
+//   console.log("User role in middleware:", req.user?.role);
+//   if (req.user.role !== "Admin") {
+//     return res
+//       .status(403)
+//       .json({ error: "Forbidden: Only admins can access this route" });
+//   }
+//   next();
+// };

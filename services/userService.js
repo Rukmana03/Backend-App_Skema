@@ -6,7 +6,8 @@ const hashPassword = async (password) => {
   return await bcrypt.hash(password, 10);
 };
 
-const createUser = async ({ username, email, password, role }) => {
+const userService = {
+createUser: async ({ username, email, password, role }) => {
   console.log("Received role:", role);
 
   if (!username || !email || !password || !role) {
@@ -27,42 +28,38 @@ const createUser = async ({ username, email, password, role }) => {
 
   // Guru dan murid tidak perlu verifikasi email
   return await userRepository.createUser(username, email, hashedPassword, role);
-};
+},
 
-const updateUser = async (id, updateData) => {
+updateUser: async (id, updateData) => {
   const user = await userRepository.findUserById(id);
   if (!user) throwError(404, "User not found");
 
   return await userRepository.updateUser(id, updateData);
-};
+},
 
-const deleteUser = async (id) => {
+deleteUser: async (id) => {
   const user = await userRepository.findUserById(id);
   if (!user) throwError(404, "User not found");
 
   return await userRepository.deleteUser(id);
-};
+},
 
-const getAllUsers = async () => {
+getAllUsers: async () => {
   return await userRepository.findAllUsers();
-};
+},
 
-const getUserById = async (id) => {
+getUserById: async (id) => {
   const user = await userRepository.findUserById(id);
   if (!user) throwError(404, "User not found");
   return user;
-};
+},
 
-const getUsersByRole = async (role) => {
+getUsersByRole: async (role) => {
   console.log("Fetching users with role:", role); // Debug log
   return await userRepository.findUsersByRole(role);
+},
+
 };
 
-module.exports = {
-  getAllUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser,
-  getUsersByRole,
-};
+
+module.exports = userService;

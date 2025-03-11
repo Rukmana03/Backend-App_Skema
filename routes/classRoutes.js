@@ -1,16 +1,17 @@
 const express = require("express");
-const router = express.Router();
 const classController = require("../controllers/classController");
-const { authenticate, roleMiddleware} = require("../middleware/authMiddleware");
+const { authenticate, roleMiddleware } = require("../middleware/authMiddleware");
 
-router.use(authenticate, roleMiddleware("Admin"));
+const router = express.Router();
 
-router.post("/", classController.createClass);
-router.get("/", classController.getAllClasses);
-router.get("/:id", classController.getClassById);
-router.put("/:id", classController.updateClass);
-router.delete("/:id", classController.deleteClass);
-router.post("/:id/students", classController.addStudentToClass);
-router.post("/:id/teachers", classController.addTeacherToClass);
+router.post("/", authenticate, roleMiddleware(["Admin"]), classController.createClass);
+router.get("/", authenticate, classController.getAllClasses);
+router.get("/:id", authenticate, classController.getClassById);
+router.put("/:id", authenticate, roleMiddleware(["Admin"]), classController.updateClass);
+router.delete("/:id", authenticate, roleMiddleware(["Admin"]), classController.deleteClass);
+router.post("/:id/students", authenticate, roleMiddleware(["Admin"]), classController.addStudentToClass);
+router.post("/:id/teachers", authenticate, roleMiddleware(["Admin"]), classController.addTeacherToClass);
+router.put("/:classId/students/:studentId", authenticate, roleMiddleware(["Admin"]), classController.deactivateStudentInClass);
+router.get("/:id/members", authenticate, classController.getClassMembers);
 
 module.exports = router;

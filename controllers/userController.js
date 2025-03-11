@@ -1,41 +1,42 @@
 const userService = require("../services/userService");
 const { errorResponse, successResponse, } = require("../utils/responeHandler");
 
-const createUser = async (req, res) => {
+const userController = {
+  createUser: async (req, res) => {
     try {
-        // Pastikan hanya Admin yang bisa membuat akun
-        if (req.user.role !== "Admin") {
-            return errorResponse(res, 403, "Only admins can create accounts." );
-        }
+      // Pastikan hanya Admin yang bisa membuat akun
+      if (req.user.role !== "Admin") {
+        return errorResponse(res, 403, "Only admins can create accounts.");
+      }
 
-        const { username, email, password, role } = req.body;
-        const newUser = await userService.createUser({ username, email, password, role });
+      const { username, email, password, role } = req.body;
+      const newUser = await userService.createUser({ username, email, password, role });
 
-        return successResponse(res, 201, "User registered successfully!", newUser );
+      return successResponse(res, 201, "User registered successfully!", newUser);
     } catch (error) {
-        return errorResponse(res, error.status || 500, error.message || "Internal Server Error");
+      return errorResponse(res, error.status || 500, error.message || "Internal Server Error");
     }
-};
+  },
 
-const getAllUsers = async (req, res) => {
+  getAllUsers: async (req, res) => {
     try {
       const users = await userService.getAllUsers();
       successResponse(res, 200, "Users retrieved successfully", users);
     } catch (error) {
       errorResponse(res, error.status || 500, error.message);
     }
-};
-  
-const getUserById = async (req, res) => {
+  },
+
+  getUserById: async (req, res) => {
     try {
       const user = await userService.getUserById(parseInt(req.params.id, 10));
       successResponse(res, 200, "User retrieved successfully", user);
     } catch (error) {
       errorResponse(res, error.status || 500, error.message);
     }
-};
+  },
 
-const updateUser = async (req, res) => {
+  updateUser: async (req, res) => {
     try {
       const userId = parseInt(req.params.id, 10);
       const updatedUser = await userService.updateUser(userId, req.body);
@@ -43,47 +44,41 @@ const updateUser = async (req, res) => {
     } catch (error) {
       errorResponse(res, error.status || 500, error.message);
     }
-};
-  
-const deleteUser = async (req, res) => {
+  },
+
+  deleteUser: async (req, res) => {
     try {
       await userService.deleteUser(parseInt(req.params.id, 10));
       successResponse(res, 200, "User deleted successfully");
     } catch (error) {
       errorResponse(res, error.status || 500, error.message);
     }
-};
+  },
 
-const getUsersByRole = async (req, res) => {
-  try {
-    let { role } = req.params; // Gunakan let agar bisa diubah
-    role = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
+  getUsersByRole: async (req, res) => {
+    try {
+      let { role } = req.params; // Gunakan let agar bisa diubah
+      role = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase();
 
-    console.log("Role after formatting:", role); // Debug log
+      console.log("Role after formatting:", role); // Debug log
 
-    const users = await userService.getUsersByRole(role);
+      const users = await userService.getUsersByRole(role);
 
-    if (!users || users.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: `No users found with role: ${role}`,
-        error: null,
-      });
+      if (!users || users.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: `No users found with role: ${role}`,
+          error: null,
+        });
+      }
+
+      successResponse(res, 200, "Users fetched successfully", users);
+    } catch (error) {
+      console.error("Error fetching users by role:", error);
+      errorResponse(res, 500, "Users fetched not success", error.message);
     }
+  },
 
-    successResponse(res, 200, "Users fetched successfully", users);
-  } catch (error) {
-    console.error("Error fetching users by role:", error);
-    errorResponse(res, 500, "Users fetched not success", error.message);
-  }
 };
 
-
-module.exports = {
-    createUser,
-    getAllUsers,
-    getUserById,
-    updateUser,
-    deleteUser,
-    getUsersByRole,
-};
+module.exports = userController;
