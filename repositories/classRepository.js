@@ -53,15 +53,6 @@ const classRepository = {
     });
   },
 
-  addTeacherToClass: async (classId, teacherId) => {
-    return await prisma.teacherClass.create({
-      data: {
-        classId: parseInt(classId),
-        teacherId: parseInt(teacherId)
-      },
-    });
-  },
-
   deactivateStudentInClass: async (classId, studentId) => {
     return await prisma.studentClass.updateMany({
       where: {

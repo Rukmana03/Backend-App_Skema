@@ -11,7 +11,16 @@ const userRepository = {
   deleteUser: (id) =>
     prisma.user.delete({ where: { id: parseInt(id, 10) } }),
 
-  findAllUsers: () => prisma.user.findMany(),
+  findAllUsers: async () => {
+    return await prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+      }
+    });
+  },
 
   findUserByEmail: (email) => prisma.user.findUnique({ where: { email } }),
 

@@ -61,17 +61,6 @@ const classController = {
     }
   },
 
-  addTeacherToClass: async (req, res) => {
-    try {
-      const { id } = req.params; // ID kelas
-      const { teacherId } = req.body;
-      await classService.addTeacherToClass(id, teacherId);
-      return successResponse(res, 200, "Teacher berhasil ditambahkan ke kelas");
-    } catch (error) {
-      return errorResponse(res, error.status || 500, error.message);
-    }
-  },
-
   deactivateStudentInClass: async (req, res) => {
     try {
       const { classId, studentId } = req.params;

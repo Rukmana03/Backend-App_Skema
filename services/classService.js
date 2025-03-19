@@ -64,33 +64,6 @@ const classService = {
     });
   },
 
-  addTeacherToClass: async (classId, teacherId) => {
-    // Cek apakah kelas ada
-    const existingClass = await prisma.class.findUnique({
-      where: { id: Number(classId) },
-    });
-    if (!existingClass) {
-      throwError(404, "Class not found");
-    }
-
-    // Cek apakah guru sudah ada dalam kelas
-    const existingTeacher = await prisma.teacherClass.findFirst({
-      where: { classId: Number(classId), teacherId: Number(teacherId) },
-    });
-
-    if (existingTeacher) {
-      throwError(400, "Teacher is already assigned to this class");
-    }
-
-    // Tambahkan guru ke kelas
-    return await prisma.teacherClass.create({
-      data: {
-        classId: Number(classId),
-        teacherId: Number(teacherId),
-      },
-    });
-  },
-
   deactivateStudentInClass: async (classId, studentId) => {
     const result = await classRepository.deactivateStudentInClass(classId, studentId);
     if (result.count === 0) {
