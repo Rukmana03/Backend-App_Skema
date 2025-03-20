@@ -6,23 +6,41 @@ const assignmentRepository = {
     validTaskCategories: ["Essay", "MultipleChoice", "Project"],
 
     // Cek apakah class, subject, dan teacher ada di database
-    validateAssignmentData: async ({ subjectId, classId, teacherId }) => {
-        const classExists = await prisma.class.findUnique({ where: { id: classId } });
-        if (!classExists) {
-            throw new Error("Class not found");
+    validateAssignmentData: async ({ subjectClassId, teacherId }) => {
+        console.log("Validating Assignment Data:", { subjectClassId, teacherId });
+
+        if (!subjectClassId || !teacherId) {
+            throw new Error(`Invalid input: subjectClassId=${subjectClassId}, teacherId=${teacherId}`);
         }
 
-        const subjectExists = await prisma.subject.findUnique({ where: { id: subjectId } });
-        if (!subjectExists) {
-            throw new Error("Subject not found");
+        const subjectExists = await prisma.subjectClass.findFirst({
+            where: { id: Number(subjectClassId) },
+        });
+
+        const teacherExists = await prisma.user.findUnique({
+            where: { id: Number(teacherId) },
+        });
+
+        if (!subjectExists) throw new Error("Subject class not found.");
+        if (!teacherExists || teacherExists.role !== "Teacher") {
+            throw new Error("Teacher not found or user is not a teacher.");
         }
 
-        const teacherExists = await prisma.user.findUnique({ where: { id: teacherId, role: "Teacher" } });
-        if (!teacherExists) {
-            throw new Error("Teacher not found");
-        }
+        return { subjectExists, teacherExists };
     },
-    
+
+    findAssignmentByTitleAndClass: async (title, subjectClassId) => {
+
+        const existingAssignment = await prisma.assignment.findFirst({
+            where: {
+                title,
+                subjectClassId: subjectClassId, // Sesuaikan dengan field di database
+            }
+        });
+
+        return existingAssignment;
+    },
+
     createAssignment: async (data) => {
         await assignmentRepository.validateAssignmentData(data);
 
@@ -30,7 +48,19 @@ const assignmentRepository = {
     },
 
     getAllAssignments: async () => {
-        return await prisma.assignment.findMany();
+        return await prisma.assignment.findMany({
+            where: { deletedAt: null },
+            include: {
+                subjectClass: {
+                    include: {
+                        subject: { select: { id: true, subjectName: true } },
+                        class: { select: { id: true, className: true } },
+                        teacher: { select: { id: true, username: true, email: true } }
+                    }
+                }
+            },
+            orderBy: { createdAt: "desc" }
+        });
     },
 
     getAssignmentById: async (id) => {

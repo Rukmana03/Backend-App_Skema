@@ -4,8 +4,8 @@ const userRepository = require("../repositories/userRepository")
 const { throwError, successResponse, } = require("../utils/responeHandler");
 
 const subjectService = {
-    createSubject: async (subjectName, description, teacherId) => {
-        if (!subjectName || !description) {
+    createSubject: async (subjectName, description, classId, teacherId) => {
+        if (!subjectName || !description || !classId || !teacherId) {
             throwError(400, "Name and description are required");
         }
 
@@ -14,18 +14,14 @@ const subjectService = {
             throwError(400, "Subject with this name already exists");
         }
 
-        let validatedTeacherId = null;
-        if (teacherId) {
-            const teacher = await userService.getUserById(teacherId);
-            console.log("Teacher Data:", teacher);
+        const teacher = await userService.getUserById(Number(teacherId));
+        console.log("Teacher Data:", teacher);
 
-            if (!teacher || teacher.role.toLowerCase() !== "Teacher") {
-                throwError(400, "Invalid teacher ID. User is not a teacher.");
-            }
-            validatedTeacherId = Number(teacherId);
+        if (!teacher || teacher.role !== "Teacher") {
+            throwError(400, "Invalid teacher ID. User is not a teacher.");
         }
-        // Buat subject dengan atau tanpa teacherId
-        return await subjectRepository.createSubject(subjectName, description, validatedTeacherId);
+
+        return await subjectRepository.createSubject(subjectName, description, classId, teacherId);
     },
 
     getAllSubjects: async () => {
@@ -38,8 +34,6 @@ const subjectService = {
     },
 
     updateSubject: async (id, subjectName, description) => {
-        console.log("Before Parsing:", { id });
-
         const parsedId = Number(id);
         if (isNaN(parsedId)) {
             throw new Error("Invalid subject ID");

@@ -40,11 +40,11 @@ const commentController = {
     getCommentsByAssignment: async (req, res) => {
         try {
             const { assignmentId } = req.params;
-            const comments = await commentService.getCommentsByAssignment(assignmentId);
-            return res.status(200).json({ success: true, message: "Komentar berhasil diambil", data: comments });
+            const response = await commentService.getCommentsByAssignment(assignmentId);
+            return res.status(200).json(response);
         } catch (error) {
             console.error("Error in getCommentsByAssignment:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message || "Unknown error" });
+            return res.status(500).json({ message: "Terjadi kesalahan", error: error.message || "Unknown error" });
         }
     },
 
@@ -80,13 +80,14 @@ const commentController = {
     getCommentsBySubmission: async (req, res) => {
         try {
             const { submissionId } = req.params;
-            const comments = await commentService.getCommentsBySubmission(submissionId);
-            return res.status(200).json({ success: true, message: "Komentar berhasil diambil", data: comments });
+            const response = await commentService.getCommentsBySubmission(submissionId);
+            return res.status(200).json(response);
         } catch (error) {
             console.error("Error in getCommentsBySubmission:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message || "Unknown error" });
+            return res.status(500).json({ message: "Terjadi kesalahan", error: error.message || "Unknown error" });
         }
     },
+
 };
 
 module.exports = commentController;

@@ -1,31 +1,44 @@
 const assignmentService = require("../services/assignmentService");
-const {errorResponse, successResponse} = require("../utils/responeHandler")
+const { errorResponse, successResponse } = require("../utils/responeHandler")
+const { PrismaClient } = require("@prisma/client");
+const prisma = new PrismaClient();
 
 const assignmentController = {
     createAssignment: async (req, res) => {
         try {
-            const teacherId = req.user?.id;
-            if (!teacherId) return res.status(401).json({ success: false, message: "Unauthorized" });
+            const { subjectClassId, teacherId, title, description, deadline, assignmentType, taskCategory } = req.body;
+
+            if (!subjectClassId || !teacherId) {
+                return res.status(400).json({ error: "subjectClassId dan teacherId harus diisi." });
+            }
 
             const newAssignment = await assignmentService.createAssignment({
-                ...req.body,
-                teacherId
+                subjectClassId,
+                teacherId,
+                title,
+                description,
+                deadline,
+                assignmentType,
+                taskCategory
             });
 
-            res.status(201).json({ success: true, message: "Tugas berhasil dibuat", data: newAssignment });
+            res.status(201).json(newAssignment);
         } catch (error) {
-            console.error("Error in createAssignment:", error);
-            res.status(500).json({ success: false, message: "Terjadi kesalahan" });
+            res.status(500).json({ error: error.message || "Terjadi kesalahan saat membuat tugas." });
         }
     },
 
     getAllAssignments: async (req, res) => {
         try {
             const assignments = await assignmentService.getAllAssignments();
-            res.status(200).json({ success: true, message: "Daftar tugas berhasil diambil", data: assignments });
+
+            if (assignments.length === 0) {
+                return res.status(404).json({ message: "No assignments found" });
+            }
+            res.status(200).json({ message: "Assignments retrieved successfully", data: assignments });
         } catch (error) {
             console.error("Error in getAllAssignments:", error);
-            res.status(500).json({ success: false, message: "Terjadi kesalahan" });
+            res.status(500).json({ message: "Internal server error", error: error.message });
         }
     },
 

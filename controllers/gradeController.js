@@ -26,7 +26,8 @@ const gradeController = {
             const updatedGrade = await gradeService.updateGrade(Number(id), req.body);
             res.status(200).json({ message: "Grade updated successfully", data: updatedGrade });
         } catch (error) {
-            res.status(400).json({ message: error.message });
+            console.error("[ERROR] Gagal mengupdate grade:", error.message);
+            res.status(500).json({ message: "Gagal mengupdate grade", error: error.message });
         }
     },
 

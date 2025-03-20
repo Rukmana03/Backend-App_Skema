@@ -127,6 +127,7 @@ model Assignment {
   teacher      User         @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
   submissions  Submission[]
   comments     Comment[]
+  files        AssignmentFile[]
 
   @@map("assignments")
 }
@@ -135,7 +136,6 @@ model Submission {
   id             Int              @id @default(autoincrement())
   assignmentId   Int              
   studentId      Int               
-  fileUrl        String?
   submissionDate DateTime
   status         SubmissionStatus
   createdAt      DateTime         @default(now())
@@ -146,6 +146,7 @@ model Submission {
   student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
   comments   Comment[]
   grades     Grade[]
+  files      SubmissionFile[]
 
   @@map("submissions")
 }
@@ -206,11 +207,34 @@ model FileStorage {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
+
   user       User      @relation(fields: [userId], references: [id])
+  assignments AssignmentFile[]
+  submissions SubmissionFile[]
 
   @@map("file_storages")
 }
+model AssignmentFile {
+  id           Int  @id @default(autoincrement())
+  assignmentId Int
+  fileId       Int
 
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  file       FileStorage @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@map("assignment_files")
+}
+
+model SubmissionFile {
+  id           Int  @id @default(autoincrement())
+  submissionId Int
+  fileId       Int
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  file       FileStorage @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@map("submission_files")
+}
 model Profile {
   bio            String?
   name           String    @db.VarChar(100)

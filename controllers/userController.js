@@ -21,9 +21,14 @@ const userController = {
   getAllUsers: async (req, res) => {
     try {
       const users = await userService.getAllUsers();
-      successResponse(res, 200, "Users retrieved successfully", users);
+
+      if (!users || users.length === 0) {
+        return res.status(404).json({ message: "Data tidak ada" });
+      }
+
+      res.status(200).json({ message: "Data berhasil ditemukan", data: users });
     } catch (error) {
-      errorResponse(res, error.status || 500, error.message);
+      res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
     }
   },
 

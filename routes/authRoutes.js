@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.post("/login", authController.loginUser);
 router.post("/logout", authenticate, authController.logoutUser);
-router.post("/refresh-token", authenticate, roleMiddleware(["Admin"]), authController.refreshToken);
+router.post("/refresh-token", authenticate, roleMiddleware("Admin"), authController.refreshToken);
 
 module.exports = router;

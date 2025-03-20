@@ -25,13 +25,16 @@ const userRepository = {
   findUserByEmail: (email) => prisma.user.findUnique({ where: { email } }),
 
   findUserById: (id) =>
-    prisma.user.findUnique({ where: { id: parseInt(id, 10) } }),
+    prisma.user.findUnique({ where: { id: Number(id) },
+      select: { id: true, email: true, refreshToken: true }
+    }),
 
   findUsersByRole: (role) => {
     return prisma.user.findMany({
       where: { role },
       select: {
         id: true,
+        username: true,
         email: true,
         role: true,
       },

@@ -9,7 +9,8 @@ const classService = {
   },
 
   getAllClasses: async () => {
-    return await classRepository.getAllClasses();
+    const classes = await classRepository.getAllClasses();
+    return classes;
   },
 
   getClassById: async (id) => {
@@ -85,18 +86,120 @@ const classService = {
       status: classData.status,
       students: classData.studentClasses.map((sc) => ({
         id: sc.Student.id,
-        name: sc.Student.name,
+        username: sc.Student.username,
         email: sc.Student.email,
-        status: sc.status, // Menampilkan status Active/Inactive
+        status: sc.status,
       })),
-      teachers: classData.teacherClasses.map((tc) => ({
-        id: tc.teacher.id,
-        name: tc.teacher.name,
-        email: tc.teacher.email,
+      subjects: classData.subjectClasses.map((sc) => ({
+        id: sc.subject.id,
+        subjectName: sc.subject.subjectName,
+        description: sc.subject.description,
+        teacher: sc.teacher
+          ? {
+            id: sc.teacher.id,
+            username: sc.teacher.username,
+            email: sc.teacher.email,
+          }
+          : null, // Jika teacher tidak ada
       })),
     };
+  },
+
+  moveStudent: async (studentId, newClassId) => {
+    studentId = Number(studentId);
+    newClassId = Number(newClassId);
+
+    // Cek apakah siswa saat ini ada di kelas aktif
+    const currentEnrollment = await classRepository.getActiveStudentClass(studentId);
+    if (!currentEnrollment) {
+      throw new Error("Siswa tidak ditemukan dalam kelas aktif mana pun.");
+    }
+
+    // Cek apakah kelas tujuan aktif
+    const newClass = await classRepository.getClassById(newClassId);
+    if (!newClass || newClass.status !== "Active") {
+      throw new Error("Kelas tujuan tidak aktif atau tidak ditemukan.");
+    }
+
+    // Pindahkan siswa ke kelas baru
+    await classRepository.moveStudent(currentEnrollment.id, newClassId);
+
+    return { message: "Siswa berhasil dipindahkan ke kelas baru." };
+  },
+
+  getActiveStudentsInClass: async (classId) => {
+    classId = Number(classId);
+
+    if (isNaN(classId)) {
+      throw new Error("classId harus berupa angka.");
+    }
+
+    const students = await classRepository.getActiveStudentClass(classId);
+
+    if (students.length === 0) {
+      throw new Error("Tidak ada siswa aktif dalam kelas ini.");
+    }
+
+    return students.map((studentClass) => ({
+      id: studentClass.Student.id,
+      name: studentClass.Student.name,
+      email: studentClass.Student.email,
+    }));
+  },
+
+  getSubjectsByClassId: async (classId) => {
+    classId = Number(classId);
+
+    if (isNaN(classId)) {
+      throw new Error("classId harus berupa angka.");
+    }
+
+    const subjects = await classRepository.getSubjectsByClassId(classId);
+
+    if (!subjects.length) {
+      throw new Error("Tidak ada subject dalam kelas ini.");
+    }
+
+    return subjects.map((subjectClass) => ({
+      id: subjectClass.subject.id,
+      Subjectname: subjectClass.subject.subjectName,
+      teacher: subjectClass.teacher
+        ? {
+          id: subjectClass.teacher.id,
+          username: subjectClass.teacher.username,
+          email: subjectClass.teacher.email
+        }
+        : null
+    }));
   },
 
 };
 
 module.exports = classService;
+
+// addTeacherToClass: async (classId, teacherId) => {
+//   // Cek apakah kelas ada
+//   const existingClass = await prisma.class.findUnique({
+//     where: { id: Number(classId) },
+//   });
+//   if (!existingClass) {
+//     throwError(404, "Class not found");
+//   }
+
+//   // Cek apakah guru sudah ada dalam kelas
+//   const existingTeacher = await prisma.subjectClass.findFirst({
+//     where: { classId: Number(classId), teacherId: Number(teacherId) },
+//   });
+
+//   if (existingTeacher) {
+//     throwError(400, "Teacher is already assigned to this class");
+//   }
+
+//   // Tambahkan guru ke kelas
+//   return await prisma.subjectClass.create({
+//     data: {
+//       classId: Number(classId),
+//       teacherId: Number(teacherId),
+//     },
+//   });
+// },

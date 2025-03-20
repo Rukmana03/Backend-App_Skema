@@ -14,13 +14,26 @@ const classRepository = {
     }
 
     // Jika tidak ada kelas dengan nama yang sama, buat kelas baru
-    return await prisma.class.create({ data });
+    return await prisma.class.create({
+      data: {
+        className: data.className,
+        status: data.status,
+        schoolId: data.schoolId,
+      },
+    });
   },
 
   getAllClasses: async () => {
     return await prisma.class.findMany({
       where: { deletedAt: null },
+      select: {
+        id: true,
+        schoolId: true,
+        className: true,
+        status: true,
+      }
     });
+
   },
 
   getClassById: async (id) => {
@@ -73,14 +86,17 @@ const classRepository = {
         studentClasses: {
           include: {
             Student: {
-              select: { id: true, username: true, email: true }, // Sesuaikan dengan kolom di model User
+              select: { id: true, username: true, email: true }, // Ambil username & email siswa
             }
           },
         },
-        teacherClasses: {
+        subjectClasses: {
           include: {
+            subject: {
+              select: { id: true, subjectName: true, description: true } // Ambil data subject
+            },
             teacher: {
-              select: { id: true, username: true, email: true },
+              select: { id: true, username: true, email: true } // Ambil username guru
             }
           },
         },
@@ -88,6 +104,48 @@ const classRepository = {
     });
   },
 
+  moveStudent: async (studentId, newClassId) => {
+
+    const studentClass = await prisma.studentClass.findFirst({
+      where: { studentId, status: "Active" } 
+    });
+
+    if (!studentClass) {
+      throw new Error("Siswa tidak ditemukan dalam kelas aktif.");
+    }
+    return await prisma.studentClass.update({
+      where: { id: studentClass.id },
+      data: { classId: newClassId },
+    });
+  },
+
+  getActiveStudentClass: async (classId) => {
+    return await prisma.studentClass.findMany({
+      where: { classId: Number(classId), status: "Active" },
+      include: { Student: true }
+    });
+  },
+
+  getSubjectsByClassId: async (classId) => {
+    return await prisma.subjectClass.findMany({
+      where: { classId },
+      include: {
+        subject: { select: { id: true, subjectName: true } },
+        teacher: { select: { id: true, username: true, email: true } }
+      }
+    });
+  },
+
 };
 
 module.exports = classRepository;
+
+// addTeacherToClass: async (classId, teacherId) => {
+//   return await prisma.subjectClass.create({
+//     data: {
+//       classId: parseInt(classId),
+//       teacherId: parseInt(teacherId)
+//     },
+//   });
+// },
+

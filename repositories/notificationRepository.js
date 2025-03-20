@@ -14,10 +14,24 @@ const notificationRepository = {
     },
 
     getNotificationsByUser: async (userId) => {
-        return await prisma.notification.findMany({
+        const notifications = await prisma.notification.findMany({
             where: { userId },
+            select: {
+                id: true,
+                userId: true,
+                message: true,
+                status: true, // Pastikan status selalu diambil
+                sentDate: true,
+            },
             orderBy: { createdAt: "desc" },
         });
+
+        await prisma.notification.updateMany({
+            where: { userId, status: "Unread" },
+            data: { status: "Read" },
+        });
+
+        return notifications;
     },
 
     markAsRead: async (notificationId) => {

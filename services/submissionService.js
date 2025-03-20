@@ -18,12 +18,23 @@ const submissionService = {
         return submission;
     },
 
+    getAllSubmissions: async () => {
+        const submissions = await submissionRepository.getAllSubmissions();
+        return {
+            message: "Submissions retrieved successfully",
+            data: submissions
+        };
+    },
+
     getSubmissionById: async (id) => {
-        const submission = await submissionRepository.getSubmissionById(Number(id));
-        if (!submission) {
-            throw new Error("Submission tidak ditemukan");
+        const submissions = await submissionRepository.getSubmissionById(Number(id));
+        if (!submissions) {
+            throw new Error("Submission not found");
         }
-        return submission;
+        return {
+            message: "Submission retrieved successfully",
+            data: submissions
+        };
     },
 
     updateSubmission: async (id, data) => {
@@ -55,6 +66,54 @@ const submissionService = {
 
     deleteSubmission: async (id) => {
         return await submissionRepository.deleteSubmission(Number(id));
+    },
+
+    submitSubmission: async ({ assignmentId, studentId }) => {
+        console.log("[DEBUG] Mulai proses submission...", { assignmentId, studentId });
+
+        assignmentId = Number(assignmentId); // Konversi ke number
+        if (isNaN(assignmentId)) {
+            throw new Error("assignmentId harus berupa angka yang valid.");
+        }
+
+        // 🔹 1. Pastikan submission sudah ada dalam status "Pending"
+        const existingSubmission = await submissionRepository.findSubmissionByStudent(assignmentId, studentId);
+        if (!existingSubmission) {
+            throw new Error("Submission belum dibuat. Harap buat submission terlebih dahulu sebelum mengirim.");
+        }
+
+        // 🔹 2. Pastikan submission memiliki file sebelum bisa disubmit
+        if (!existingSubmission.fileUrl) {
+            throw new Error("Submission harus memiliki file sebelum bisa dikirim.");
+        }
+
+        // 🔹 3. Cek apakah assignment ada
+        const assignment = await assignmentRepository.getAssignmentById(assignmentId);
+        if (!assignment) {
+            throw new Error("Assignment tidak ditemukan.");
+        }
+
+        // 🔹 4. Cek apakah deadline ada dan valid
+        if (!assignment.deadline) {
+            throw new Error("Assignment belum memiliki deadline.");
+        }
+
+        const now = new Date();
+        const deadlineDate = new Date(assignment.deadline);
+
+        if (isNaN(deadlineDate.getTime())) {
+            throw new Error("Format deadline tidak valid.");
+        }
+
+        if (deadlineDate < now) {
+            throw new Error("Deadline sudah lewat, tidak bisa submit.");
+        }
+
+        // 🔹 5. Ubah status submission menjadi "Submitted"
+        const submission = await submissionRepository.updateSubmissionStatus(existingSubmission.id, "Submitted");
+
+        console.log("[DEBUG] Submission berhasil dikirim:", submission);
+        return submission;
     },
 
 };

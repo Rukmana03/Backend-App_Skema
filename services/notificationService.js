@@ -3,14 +3,28 @@ const { successResponse, throwError } = require("../utils/responeHandler");
 
 const notificationService = {
     sendNotification: async (userId, message) => {
-        if (!userId || !message) throwError(400, "User ID dan pesan diperlukan");
-        const notification = await notificationRepository.createNotification(userId, message);
-        return successResponse(201, "Notifikasi dikirim", notification);
+        if (!userId || !message) {
+            throw new Error("User ID dan pesan diperlukan");
+        }
+
+        return await notificationRepository.createNotification(userId, message);
     },
 
     getUserNotifications: async (userId) => {
-        const notifications = await notificationRepository.getUserNotifications(userId);
-        return successResponse(200, "Daftar notifikasi", notifications);
+
+        const notifications = await notificationRepository.getNotificationsByUser(userId);
+
+        if (!Array.isArray(notifications) || notifications.length === 0) {
+            return { success: true, message: "Tidak ada notifikasi ditemukan", data: [] };
+        }
+
+        notifications.forEach((notification, index) => {
+            if (!notification.status) {
+                notification.status = "Unread";
+            }
+        });
+
+        return { data: notifications };
     },
 
     markNotificationAsRead: async (notificationId) => {
@@ -22,6 +36,7 @@ const notificationService = {
         await notificationRepository.deleteNotification(notificationId);
         return successResponse(200, "Notifikasi dihapus");
     },
+    
 };
 
 module.exports = notificationService;

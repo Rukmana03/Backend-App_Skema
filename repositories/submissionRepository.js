@@ -50,11 +50,66 @@ const submissionRepository = {
         });
     },
 
+    getAllSubmissions: async () => {
+        return await prisma.submission.findMany({
+            select: {
+                id: true,
+                fileUrl: true,
+                submissionDate: true,
+                status: true,
+                student: { select: { id: true, username: true } },
+                assignment: {
+                    select: {
+                        id: true,
+                        title: true,
+                        teacher: { select: { id: true, username: true, email: true } }
+                    }
+                },
+                comments: {
+                    select: {
+                        id: true,
+                        content: true,
+                        commentDate: true,
+                        user: { select: { id: true, username: true, email: true } }
+                    },
+                    orderBy: { commentDate: "asc" }
+                }
+            }
+        });
+    },
+
     getSubmissionById: async (id) => {
         return await prisma.submission.findUnique({
             where: { id: Number(id) },
-            include: { assignment: true, student: true },
+            select: {
+                id: true,
+                assignmentId: true,
+                studentId: true,
+                fileUrl: true,
+                submissionDate: true,
+                status: true,
+                assignment: {
+                    select: { id: true, title: true, teacherId: true }
+                },
+                student: {
+                    select: { id: true, username: true }
+                }
+            }
         });
+    },
+
+    findSubmissionByStudent: async (submissionId, studentId) => {
+        console.log("[DEBUG] Mencari submission...", { submissionId, studentId });
+
+        const submission = await prisma.submission.findFirst({
+            where: {
+                id: Number(submissionId), // Gunakan ID Submission, bukan Assignment!
+                studentId: Number(studentId)
+            }
+        });
+
+        console.log("[DEBUG] Submission ditemukan:", submission);
+        return submission;
     },
 
     updateSubmission: async (id, data) => {
@@ -71,6 +126,13 @@ const submissionRepository = {
         return await prisma.submission.update({
             where: { id },
             data,
+        });
+    },
+
+    updateSubmissionStatus: async (submissionId, newStatus) => {
+        return await prisma.submission.update({
+            where: { id: Number(submissionId) },
+            data: { status: newStatus } // ✅ Perbaikan: newStatus harus dalam objek data
         });
     },
 

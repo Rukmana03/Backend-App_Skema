@@ -35,11 +35,54 @@ const commentService = {
     },
 
     getCommentsByAssignment: async (assignmentId) => {
-        return await commentRepository.findCommentsByAssignment(assignmentId);
+        const comments = await commentRepository.findCommentsByAssignment(assignmentId);
+
+        if (!comments || comments.length === 0) {
+            return { success: true, message: "Tidak ada komentar ditemukan", data: [] };
+        }
+
+        // 🔹 Filter data sebelum mengembalikan respons
+        const formattedComments = comments.map(comment => ({
+            id: comment.id,
+            userId: comment.userId,
+            submissionId: comment.submissionId,
+            assignmentId: comment.assignmentId,
+            type: comment.assignmentId ? "Assignment" : "Submission",
+            content: comment.content,
+            commentDate: comment.commentDate,
+            user: {
+                id: comment.user.id,
+                username: comment.user.username,
+                role: comment.user.role
+            }
+        }));
+
+        return { message: "Komentar berhasil diambil", data: formattedComments };
     },
 
     getCommentsBySubmission: async (submissionId) => {
-        return await commentRepository.findCommentsBySubmission(submissionId);
+        const comments = await commentRepository.findCommentsBySubmission(submissionId);
+
+        if (!comments || comments.length === 0) {
+            return { success: true, message: "Tidak ada komentar ditemukan", data: [] };
+        }
+
+        const formattedComments = comments.map(comment => ({
+            id: comment.id,
+            userId: comment.userId,
+            submissionId: comment.submissionId,
+            assignmentId: comment.assignmentId,
+            type: comment.assignmentId ? "Assignment" : "Submission",
+            content: comment.content,
+            commentDate: comment.commentDate,
+            user: {
+                id: comment.user.id,
+                username: comment.user.username,
+                role: comment.user.role
+            }
+        }));
+
+        return { success: true, message: "Komentar berhasil diambil", data: formattedComments };
     },
 
 };

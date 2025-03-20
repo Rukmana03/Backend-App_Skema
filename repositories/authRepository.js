@@ -25,6 +25,7 @@ const authRepository = {
   },
 
   updateUserRefreshToken: async (userId, refreshToken) => {
+    console.log(`[DEBUG] Mengupdate refresh token di DB untuk user ID ${userId}:`, refreshToken);
     return await prisma.user.update({
       where: { id: userId },
       data: { refreshToken }, // Sesuaikan dengan nama kolom di database

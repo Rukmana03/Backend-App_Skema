@@ -3,16 +3,40 @@ const { throwError } = require("../utils/responeHandler");
 const prisma = new PrismaClient();
 
 const subjectRepository = {
-    createSubject: async (subjectName, description, teacherId) => {
-        return await prisma.subject.create({
-            data: { subjectName, description, teacherId: teacherId ? Number(teacherId) : null },
-            include: { users: true },
+    createSubject: async (subjectName, description, classId, teacherId) => {
+
+        const newSubject = await prisma.subject.create({
+            data: { subjectName, description }
         });
+        const newSubjectClass = await prisma.subjectClass.create({
+            data: {
+                subjectId: newSubject.id,
+                classId: Number(classId),
+                teacherId: Number(teacherId),
+                code: `SUB-${newSubject.id}-${classId}-${teacherId}`
+            }
+        });
+        return { newSubject, newSubjectClass };
     },
 
     findAllSubjects: async () => {
-        const subjects = await prisma.subject.findMany();
-        return subjects;
+        const subjects = await prisma.subject.findMany({
+            include: { subjectClasses: { include: { class: true, teacher: { select: { id: true, username: true, email: true } } } } }
+        });
+        return subjects.map(subject => ({
+            id: subject.id,
+            subjectName: subject.subjectName,
+            description: subject.description,
+            code: subject.subjectClasses?.[0]?.code || null,
+            createdAt: subject.createdAt,
+            updatedAt: subject.updatedAt,
+            classes: subject.subjectClasses.map(sc => ({
+                classId: sc.classId,
+                teacher: sc.teacher
+                    ? { id: sc.teacher.id, name: sc.teacher.username, email: sc.teacher.email }
+                    : null
+            }))
+        }));
     },
 
     findSubjectById: async (id) => {
@@ -51,6 +75,7 @@ const subjectRepository = {
             data: {
                 subjectName: subjectName || subjectExists.subjectName,
                 description: description || subjectExists.description,
+                updatedAt: new Date()
             },
         });
     },

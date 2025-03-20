@@ -2,23 +2,32 @@ const notificationService = require("../services/notificationService");
 const { successResponse } = require("../utils/responeHandler");
 
 const notificationController = {
-    sendNotification: async (req, res, next) => {
+    sendNotification: async (req, res,) => {
         try {
             const { userId, message } = req.body;
-            const response = await notificationService.sendNotification(userId, message);
-            res.status(response.status).json(response);
+            const notification = await notificationService.sendNotification(userId, message);
+
+            res.status(201).json({
+                message: "Notifikasi berhasil dikirim",
+                data: notification
+            });
         } catch (error) {
-            next(error);
+            res.status(400).json({ message: error.message });
         }
     },
 
-    getUserNotifications: async (req, res, next) => {
+    getUserNotifications: async (req, res) => {
         try {
-            const userId = req.user.id; // Dapatkan dari token JWT
-            const response = await notificationService.getUserNotifications(userId);
-            res.status(response.status).json(response);
+            const userId = req.user.id;
+            const notifications = await notificationService.getUserNotifications(userId);
+
+            res.status(200).json({
+                message: "Notifikasi berhasil diambil",
+                data: notifications,
+            });
         } catch (error) {
-            next(error);
+            console.error("[ERROR] Gagal mengambil notifikasi:", error);
+            res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message });
         }
     },
 

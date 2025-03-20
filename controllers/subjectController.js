@@ -5,23 +5,20 @@ const subjectService = require("../services/subjectService");
 const subjectController = {
     createSubject: async (req, res) => {
         try {
-            const { subjectName, description, teacherId } = req.body;
+            const { subjectName, description, teacherId, classId, } = req.body;
 
-            const subject = await subjectService.createSubject(subjectName, description, teacherId);
+            const subjectData = await subjectService.createSubject(subjectName, description, classId, teacherId);
 
             res.status(201).json({
                 message: "Subject created successfully",
                 data: {
-                    id: subject.id,
-                    subjectName: subject.subjectName,
-                    description: subject.description,
-                    teacher: subject.users
-                        ? {
-                            id: subject.users.id,
-                            name: subject.users.username,
-                            email: subject.users.email,
-                        }
-                        : null,
+                    id: subjectData.newSubject.id,
+                    subjectName: subjectData.newSubject.subjectName,
+                    description: subjectData.newSubject.description,
+                    classId: subjectData.newSubjectClass.classId,
+                    teacher: {
+                        id: teacherId,
+                    },
                 },
             });
         } catch (error) {
@@ -31,15 +28,26 @@ const subjectController = {
 
     getAllSubjects: async (req, res) => {
         try {
-
             const subjects = await subjectService.getAllSubjects();
 
-            if (subjects.length === 0) {
-                return res.status(404).json({ message: "No subjects found" });
+            if (!subjects || subjects.length === 0) {
+                return res.status(404).json({
+                    message: "No subjects found",
+                    data: []
+                });
             }
-            res.json(subjects);
+
+            res.status(200).json({
+                message: "Subjects retrieved successfully",
+                data: subjects
+            });
+
         } catch (error) {
-            res.status(500).json({ error: "Internal Server Error" });
+            console.error("Get All Subjects Error:", error);
+            res.status(500).json({
+                error: "Internal Server Error",
+                details: error.message
+            });
         }
     },
 
