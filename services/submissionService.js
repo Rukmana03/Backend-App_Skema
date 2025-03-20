@@ -1,6 +1,7 @@
 const submissionRepository = require("../repositories/submissionRepository");
 const assignmentRepository = require("../repositories/assignmentRepository");
-const notificationService = require("../services/notificationService")
+const notificationService = require("../services/notificationService");
+const folderHelper = require("../utils/folderHelper");
 
 const submissionService = {
     createSubmission: async (data) => {
@@ -8,12 +9,33 @@ const submissionService = {
             throw new Error("assignmentId, studentId, dan fileUrl harus diisi");
         }
 
+        // ✅ Buat submission di database
         const submission = await submissionRepository.createSubmission(data);
 
+        // ✅ Ambil data Assignment untuk mendapatkan informasi kelas & sekolah
         const assignment = await assignmentRepository.getAssignmentById(data.assignmentId);
-        if (assignment) {
-            await notificationService.sendNotification(assignment.teacherId, `Siswa mengirim tugas untuk "${assignment.title}".`);
+        if (!assignment) {
+            throw new Error("Assignment tidak ditemukan.");
         }
+
+        // ✅ Ambil data kelas untuk mendapatkan schoolId & classId
+        const subjectClass = await prisma.subjectClass.findUnique({
+            where: { id: assignment.subjectClassId },
+            include: { class: { select: { id: true, schoolId: true } } }
+        });
+
+        if (!subjectClass || !subjectClass.class) {
+            throw new Error("Class atau School tidak ditemukan.");
+        }
+
+        const schoolId = subjectClass.class.schoolId;
+        const classId = subjectClass.class.id;
+
+        // ✅ Buat folder penyimpanan untuk submission ini
+        folderHelper.createSubmissionFolder(schoolId, classId, submission.id);
+
+        // ✅ Kirim notifikasi ke guru bahwa ada submission baru
+        await notificationService.sendNotification(assignment.teacherId, `Siswa mengirim tugas untuk "${assignment.title}".`);
 
         return submission;
     },

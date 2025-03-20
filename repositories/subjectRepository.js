@@ -4,7 +4,13 @@ const prisma = new PrismaClient();
 
 const subjectRepository = {
     createSubject: async (subjectName, description, classId, teacherId) => {
-
+            const classData = await prisma.class.findUnique({
+                where: { id: Number(classId) },
+                select: { schoolId: true }
+            });
+            if (!classData) {
+                throw new Error("Invalid class ID. School not found.");
+            }
         const newSubject = await prisma.subject.create({
             data: { subjectName, description }
         });
@@ -16,7 +22,7 @@ const subjectRepository = {
                 code: `SUB-${newSubject.id}-${classId}-${teacherId}`
             }
         });
-        return { newSubject, newSubjectClass };
+        return { newSubject, newSubjectClass, schoolId: classData.schoolId };
     },
 
     findAllSubjects: async () => {

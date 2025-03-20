@@ -2,10 +2,26 @@ const classRepository = require("../repositories/classRepository");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const { throwError } = require("../utils/responeHandler");
+const folderHelper = require("../utils/folderHelper");
 
 const classService = {
   createClass: async (data) => {
-    return await classRepository.createClass(data);
+    const { schoolId, className } = data;
+    if (!schoolId || !className) {
+      throw new Error("School ID dan nama kelas wajib diisi.");
+    }
+    const existingClass = await classRepository.findClassByNameAndSchool(schoolId, className);
+    if (existingClass) {
+      throw new Error("Nama kelas sudah digunakan dalam sekolah ini. Gunakan nama lain.");
+    }
+    const newClass = await classRepository.createClass({
+      schoolId,
+      className,
+      status: "Active" 
+    });
+
+    folderHelper.createClassFolder(newClass.schoolId, newClass.id);
+    return newClass;
   },
 
   getAllClasses: async () => {

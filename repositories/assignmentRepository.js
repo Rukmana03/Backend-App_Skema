@@ -42,9 +42,17 @@ const assignmentRepository = {
     },
 
     createAssignment: async (data) => {
-        await assignmentRepository.validateAssignmentData(data);
-
-        return await prisma.assignment.create({ data });
+        return await prisma.assignment.create({
+            data: {
+                title: data.title,
+                description: data.description,
+                deadline: data.deadline,
+                assignmentType: data.assignmentType,
+                taskCategory: data.taskCategory,
+                subjectClassId: data.subjectClassId,
+                teacherId: data.teacherId
+            }
+        });
     },
 
     getAllAssignments: async () => {

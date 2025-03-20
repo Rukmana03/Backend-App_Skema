@@ -26,7 +26,7 @@ const userRepository = {
 
   findUserById: (id) =>
     prisma.user.findUnique({ where: { id: Number(id) },
-      select: { id: true, email: true, refreshToken: true }
+      select: { id: true, email: true, refreshToken: true, role: true }
     }),
 
   findUsersByRole: (role) => {

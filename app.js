@@ -15,6 +15,7 @@ const gradeRoutes = require("./routes/gradeRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const schoolRoutes = require("./routes/schoolRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const fileStorageRoutes = require("./routes/fileStorageRoutes");
 
 app.use(bodyParser.json());
 app.use(express.json());
@@ -32,6 +33,7 @@ app.use("/api/profiles", profileRoutes);
 app.use("/api/grades", gradeRoutes);
 app.use("/api/schools", schoolRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/files", fileStorageRoutes);
 
 app.get("/", (req, res) => {
     res.send("Server berjalan!");

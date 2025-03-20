@@ -38,7 +38,13 @@ const fileStorageRepository = {
         return await prisma.fileStorage.delete({
             where: { id: fileId }
         });
-    }
+    },
+
+    getFileById: async (fileId) => {
+        return await prisma.fileStorage.findUnique({
+            where: { id: fileId },
+        });
+    },
 };
 
 module.exports = fileStorageRepository;

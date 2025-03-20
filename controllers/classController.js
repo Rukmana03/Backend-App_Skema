@@ -5,9 +5,10 @@ const classController = {
   createClass: async (req, res) => {
     try {
       const newClass = await classService.createClass(req.body);
-      res.status(201).json({ message: "Class created successfully", data: newClass });
+      res.status(201).json({ success: true, message: "Class created successfully", data: newClass });
     } catch (error) {
-      res.status(400).json({ message: "Error creating class", error: error.message });
+      console.error("[ERROR] Gagal membuat kelas:", error.message);
+      res.status(400).json({ success: false, message: "Error creating class", error: error.message });
     }
   },
 
@@ -122,7 +123,7 @@ const classController = {
       const { id } = req.params;
 
       if (!id) {
-        return res.status(400).json({  message: "classId diperlukan." });
+        return res.status(400).json({ message: "classId diperlukan." });
       }
 
       const subjects = await classService.getSubjectsByClassId(id);

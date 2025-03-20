@@ -6,7 +6,9 @@ const classRepository = {
   createClass: async (data) => {
     // Cek apakah kelas dengan nama yang sama sudah ada
     const existingClass = await prisma.class.findFirst({
-      where: { className: data.className },
+      where: { className: data.className,
+        schoolId: data.schoolId,
+       },
     });
 
     if (existingClass) {
@@ -17,7 +19,7 @@ const classRepository = {
     return await prisma.class.create({
       data: {
         className: data.className,
-        status: data.status,
+        status: data.status || "Active",
         schoolId: data.schoolId,
       },
     });
@@ -132,6 +134,15 @@ const classRepository = {
       include: {
         subject: { select: { id: true, subjectName: true } },
         teacher: { select: { id: true, username: true, email: true } }
+      }
+    });
+  },
+
+  findClassByNameAndSchool: async (schoolId, className) => {
+    return await prisma.class.findFirst({
+      where: {
+        schoolId: Number(schoolId),
+        className: className,
       }
     });
   },

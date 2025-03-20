@@ -6,6 +6,8 @@ const prisma = new PrismaClient();
 const assignmentController = {
     createAssignment: async (req, res) => {
         try {
+            console.log("[DEBUG] Data dari Request:", req.body); // 🔹 Debugging
+
             const { subjectClassId, teacherId, title, description, deadline, assignmentType, taskCategory } = req.body;
 
             if (!subjectClassId || !teacherId) {
@@ -19,11 +21,12 @@ const assignmentController = {
                 description,
                 deadline,
                 assignmentType,
-                taskCategory
+                taskCategory,
             });
 
             res.status(201).json(newAssignment);
         } catch (error) {
+            console.error("[ERROR] Gagal membuat assignment:", error.message); // 🔹 Debugging error
             res.status(500).json({ error: error.message || "Terjadi kesalahan saat membuat tugas." });
         }
     },

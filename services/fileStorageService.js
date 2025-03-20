@@ -11,6 +11,11 @@ const fileStorageService = {
 
         const file = await fileStorageRepository.createFile({ userId, fileName, fileUrl });
 
+        const existingFile = await fileStorageRepository.linkFileToAssignment( fileName, assignmentId);
+        if (existingFile) {
+            throw new Error("File sudah terhubung ke Assignment ini.");
+        }
+
         await fileStorageRepository.linkFileToAssignment(file.id, assignmentId);
 
         return file;
@@ -23,6 +28,11 @@ const fileStorageService = {
         }
 
         const file = await fileStorageRepository.createFile({ userId, fileName, fileUrl });
+
+        const existingFile = await fileStorageRepository.linkFileToSubmission(file.id, submissionId);
+        if (existingFile) {
+            throw new Error("File sudah terhubung ke Submission ini.");
+        }
 
         await fileStorageRepository.linkFileToSubmission(file.id, submissionId);
 
@@ -38,8 +48,13 @@ const fileStorageService = {
     },
 
     deleteFile: async (fileId) => {
-        return await fileStorageRepository.deleteFile(fileId);
-    }
+        const file = await fileStorageRepository.getFileById(fileId);
+        if (!file) {
+            throw new Error("File tidak ditemukan.");
+        }
+        await fileStorageRepository.deleteFile(fileId);
+        return { message: "File berhasil dihapus." };
+    },
 };
 
 module.exports = fileStorageService;

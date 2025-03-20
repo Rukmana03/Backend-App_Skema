@@ -1,7 +1,8 @@
 const schoolRepository = require("../repositories/schoolRepository");
+const folderHelper = require("../utils/folderHelper");
 
 const schoolService = {
-    getAllSchools: async() => {
+    getAllSchools: async () => {
         return await schoolRepository.findAll();
     },
 
@@ -10,7 +11,9 @@ const schoolService = {
     },
 
     createSchool: async (data) => {
-        return await schoolRepository.create(data);
+        const school = await schoolRepository.create(data);
+        folderHelper.createSchoolFolder(school.id);
+        return school;
     },
 
     updateSchool: async (id, data) => {

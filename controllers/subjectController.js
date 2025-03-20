@@ -8,6 +8,7 @@ const subjectController = {
             const { subjectName, description, teacherId, classId, } = req.body;
 
             const subjectData = await subjectService.createSubject(subjectName, description, classId, teacherId);
+            console.log("[DEBUG] Subject Data:", subjectData);
 
             res.status(201).json({
                 message: "Subject created successfully",
@@ -16,6 +17,7 @@ const subjectController = {
                     subjectName: subjectData.newSubject.subjectName,
                     description: subjectData.newSubject.description,
                     classId: subjectData.newSubjectClass.classId,
+                    subjectClassId: subjectData.newSubjectClass.id,
                     teacher: {
                         id: teacherId,
                     },
