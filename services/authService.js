@@ -1,14 +1,13 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const authRepository = require("../repositories/authRepository");
-const userRepository = require("../repositories/userRepository")
-const { throwError } = require("../utils/responeHandler");
+const userRepository = require("../repositories/userRepository");
+const { throwError } = require("../utils/responseHandler");
 require("dotenv").config();
-
 
 const loginAttempts = {};
 const maxAttempts = 3;
-const lockoutTime = 10 * 60 * 1000;
+const lockoutTime = 10 * 60 * 1000; // 10 menit
 
 const generateAccessToken = (userId, email, role) => {
   return jwt.sign({ id: userId, email, role }, process.env.JWT_SECRET, {
@@ -16,7 +15,7 @@ const generateAccessToken = (userId, email, role) => {
   });
 };
 
-const generateRefreshToken = (userId, email, role,) => {
+const generateRefreshToken = (userId, email, role) => {
   return jwt.sign({ id: userId, email, role }, process.env.JWT_REFRESH_SECRET, {
     expiresIn: "7d",
   });
@@ -25,21 +24,22 @@ const generateRefreshToken = (userId, email, role,) => {
 const authService = {
   loginUser: async ({ email, password }) => {
     if (!email || !password) {
-      throwError(400, "Email and password are required");
+      throwError(400, "Email dan password wajib diisi");
     }
 
+    // Inisialisasi percobaan login
     if (!loginAttempts[email]) {
       loginAttempts[email] = { attempts: 0, lastAttempt: Date.now() };
     }
 
+    // Cek apakah user terkunci karena terlalu banyak percobaan
     if (loginAttempts[email].attempts >= maxAttempts) {
       const timeSinceLastAttempt = Date.now() - loginAttempts[email].lastAttempt;
-      console.log(`Waktu sejak percobaan terakhir: ${timeSinceLastAttempt / 1000} detik`);
 
       if (timeSinceLastAttempt < lockoutTime) {
-        throwError(429, "Too many login attempts. Try again later.");
+        throwError(429, "Terlalu banyak percobaan login. Coba lagi nanti.");
       } else {
-        console.log("Lockout berakhir, reset login attempts.");
+        // Reset jika sudah lewat waktu kunci
         loginAttempts[email].attempts = 0;
         loginAttempts[email].lastAttempt = Date.now();
       }
@@ -49,75 +49,74 @@ const authService = {
     if (!user) {
       loginAttempts[email].attempts++;
       loginAttempts[email].lastAttempt = Date.now();
-      throwError(401, "Invalid email or password");
+      throwError(401, "Email atau password salah");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       loginAttempts[email].attempts++;
       loginAttempts[email].lastAttempt = Date.now();
-      throwError(401, "Invalid email or password");
+      throwError(401, "Email atau password salah");
     }
 
+    // Reset login attempt jika berhasil
     delete loginAttempts[email];
 
-    const accessToken = generateAccessToken(user.id, user.email, user.role,);
+    const accessToken = generateAccessToken(user.id, user.email, user.role);
     let refreshToken = null;
 
     if (user.role === "Admin") {
       refreshToken = generateRefreshToken(user.id, user.email, user.role);
-      await authRepository.updateUserRefreshToken(user.id, refreshToken); // Save refresh token in DB
+      await authRepository.updateRefreshToken(user.id, refreshToken);
     }
 
     return { user, accessToken, refreshToken };
   },
 
   logoutUser: async (userId) => {
-    console.log(`Menghapus refresh token untuk user ID: ${userId}`);
     const user = await userRepository.findUserById(userId);
-    console.log(`Refresh token berhasil dihapus untuk user ID: ${userId}`);
-    // Jika user tidak ditemukan
     if (!user) {
-      throwError(404, "User not found");
+      throwError(404, "User tidak ditemukan");
     }
 
-    // Hanya hapus refreshToken jika user adalah Admin
     if (user.role === "Admin") {
-      await authRepository.updateUserRefreshToken(userId, null);
+      await authRepository.updateRefreshToken(userId, null);
     }
 
-    return { message: "Logout successful" };
+    return user;
   },
 
-  refreshAccessToken: async (refreshToken) => {
-    if (!refreshToken) {
-      throwError(401, "Refresh token is required");
+  refreshAccessToken: async (oldRefreshToken) => {
+    if (!oldRefreshToken) {
+      throwError(401, "Refresh token diperlukan");
     }
 
+    let decoded;
     try {
-      console.log("[DEBUG] Refresh Token Diterima:", refreshToken);
-      console.log("[DEBUG] Decode Sebelum Verifikasi:", jwt.decode(refreshToken));
-
-      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-      console.log("[DEBUG] Hasil Decode Setelah Verifikasi:", decoded);
-
-      const user = await userRepository.findUserById(decoded.id);
-      if (!user || user.refreshToken !== refreshToken) {
-        await authRepository.updateUserRefreshToken(decoded.id, null);
-        throwError(401, "Invalid refresh token");
-      }
-
-      // 🔹 Perbaikan: Gunakan role dari decoded jika ada
-      const newAccessToken = generateAccessToken(decoded.id, decoded.email, decoded.role || user.role);
-      console.log("[DEBUG] New Access Token:", newAccessToken);
-
-      return { accessToken: newAccessToken };
+      decoded = jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_SECRET);
     } catch (error) {
-      console.error("[ERROR] Refresh token tidak valid:", error.message);
-      throwError(401, "Invalid or expired refresh token");
+      throwError(401, "Refresh token tidak valid atau kadaluarsa");
     }
-  },
 
+    const user = await userRepository.findUserById(decoded.id);
+    if (!user || user.refreshToken !== oldRefreshToken) {
+      // Jika token tidak cocok, hapus dari DB untuk keamanan
+      await authRepository.updateRefreshToken(decoded.id, null);
+      throwError(401, "Refresh token tidak valid");
+    }
+
+    // 🔄 ROTASI TOKEN: buat token baru
+    const newAccessToken = generateAccessToken(user.id, user.email, user.role);
+    const newRefreshToken = generateRefreshToken(user.id, user.email, user.role);
+
+    // Simpan refresh token baru (ganti yang lama)
+    await authRepository.updateRefreshToken(user.id, newRefreshToken);
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken, // kirim ini ke frontend
+    };
+  },
 };
 
-module.exports = authService
+module.exports = authService;

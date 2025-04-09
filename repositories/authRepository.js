@@ -2,36 +2,27 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const authRepository = {
-  findUserByEmail: (email) => prisma.user.findUnique({ where: { email } }),
+  findUserByEmail: (email) =>
+    prisma.user.findUnique({
+      where: { email },
+    }),
 
-  saveRefreshToken: async (userId, token) => {
-    return await prisma.user.update({
+  updateRefreshToken: (userId, token) =>
+    prisma.user.update({
       where: { id: userId },
       data: { refreshToken: token },
-    });
-  },
+    }),
 
-  findRefreshToken: async (token) => {
-    return await prisma.user.findUnique({
+  findUserByRefreshToken: (token) =>
+    prisma.user.findUnique({
       where: { refreshToken: token },
-    });
-  },
+    }),
 
-  deleteRefreshToken: async (userId) => {
-    return await prisma.user.update({
+  deleteRefreshToken: (userId) =>
+    prisma.user.update({
       where: { id: userId },
       data: { refreshToken: null },
-    });
-  },
-
-  updateUserRefreshToken: async (userId, refreshToken) => {
-    console.log(`[DEBUG] Mengupdate refresh token di DB untuk user ID ${userId}:`, refreshToken);
-    return await prisma.user.update({
-      where: { id: userId },
-      data: { refreshToken }, // Sesuaikan dengan nama kolom di database
-    });
-  },
-
+    }),
 };
 
 module.exports = authRepository;

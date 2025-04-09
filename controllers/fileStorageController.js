@@ -3,52 +3,30 @@ const fileStorageService = require("../services/fileStorageService");
 const fileStorageController = {
     addFileToAssignment: async (req, res) => {
         try {
-            console.log("[DEBUG] Isi req.file:", req.file); // 🔹 Tambahkan ini untuk debugging
-            const { assignmentId } = req.params;
             const userId = req.user.id;
-            const file = req.file;
-
-            if (!file) {
-                return res.status(400).json({ success: false, message: "File harus diunggah!" });
-            }
-
-            const fileData = {
-                assignmentId: Number(assignmentId),
+            const files = req.files;
+            const payload = {
                 userId,
-                fileName: file.originalname,
-                fileUrl: `/uploads/assignments/${file.filename}`, // Simpan path
+                assignmentId: req.params.assignmentId || req.body.assignmentId,
+                schoolId: req.body.schoolId,
+                classId: req.body.classId,
+                subjectId: req.body.subjectId,
+                files,
             };
 
-            const savedFile = await fileStorageService.addFileToAssignment(fileData);
-            return res.status(201).json({ success: true, message: "File berhasil diunggah", data: savedFile });
+            const savedFiles = await fileStorageService.addFilesToAssignment(payload);
+
+            return res.status(201).json({
+                success: true,
+                message: "File berhasil diunggah",
+                data: savedFiles,
+            });
         } catch (error) {
-            console.error("Error upload file ke Assignment:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message });
-        }
-    },
-
-    addFileToSubmission: async (req, res) => {
-        try {
-            const { submissionId } = req.params;
-            const userId = req.user.id;
-            const file = req.file;
-
-            if (!file) {
-                return res.status(400).json({ success: false, message: "File harus diunggah!" });
-            }
-
-            const fileData = {
-                submissionId: Number(submissionId),
-                userId,
-                fileName: file.originalname,
-                fileUrl: `/uploads/submissions/${file.filename}`, // Simpan path
-            };
-
-            const savedFile = await fileStorageService.addFileToSubmission(fileData);
-            return res.status(201).json({ success: true, message: "File berhasil diunggah", data: savedFile });
-        } catch (error) {
-            console.error("Error upload file ke Submission:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message });
+            console.error("[ERROR] Gagal upload file ke Assignment:", error);
+            return res.status(error.statusCode || 500).json({
+                success: false,
+                message: error.message || "Terjadi kesalahan",
+            });
         }
     },
 
@@ -56,7 +34,6 @@ const fileStorageController = {
         try {
             const { assignmentId } = req.params;
             const files = await fileStorageService.getFilesByAssignment(Number(assignmentId));
-
             if (!files.length) {
                 return res.status(404).json({ success: false, message: "Tidak ada file dalam assignment ini." });
             }
@@ -72,7 +49,6 @@ const fileStorageController = {
         try {
             const { submissionId } = req.params;
             const files = await fileStorageService.getFilesBySubmission(Number(submissionId));
-
             if (!files.length) {
                 return res.status(404).json({ success: false, message: "Tidak ada file dalam submission ini." });
             }
@@ -93,6 +69,16 @@ const fileStorageController = {
         } catch (error) {
             console.error("Error deleteFile:", error);
             return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message });
+        }
+    },
+
+    downloadFile: async (req, res, next) => {
+        try {
+            const { fileId } = req.params;
+            const result = await fileStorageService.downloadFile(fileId, req.user);
+            res.download(result.filePath, result.fileName);
+        } catch (err) {
+            next(err);
         }
     },
 };

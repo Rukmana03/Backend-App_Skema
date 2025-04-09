@@ -20,10 +20,9 @@ const fileStorageRepository = {
         });
     },
 
-    getFilesByAssignment: async (assignmentId) => {
-        return await prisma.assignmentFile.findMany({
-            where: { assignmentId },
-            include: { file: true }
+    getFileByAssignment: async (fileId, assignmentId) => {
+        return await prisma.assignmentFile.findFirst({
+            where: { fileId, assignmentId }
         });
     },
 
@@ -41,8 +40,12 @@ const fileStorageRepository = {
     },
 
     getFileById: async (fileId) => {
-        return await prisma.fileStorage.findUnique({
+        return prisma.fileStorage.findUnique({
             where: { id: fileId },
+            include: {
+                AssignmentFile: true,
+                SubmissionFile: true,
+            },
         });
     },
 };

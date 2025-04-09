@@ -1,18 +1,18 @@
 const notificationService = require("../services/notificationService");
-const { successResponse } = require("../utils/responeHandler");
+const { successResponse, errorResponse } = require("../utils/responseHandler");
 
 const notificationController = {
-    sendNotification: async (req, res,) => {
+    sendNotification: async (req, res) => {
         try {
             const { userId, message } = req.body;
-            const notification = await notificationService.sendNotification(userId, message);
+            if (!userId || !message) {
+                return errorResponse(res, 400, "userId dan message wajib diisi.");
+            }
 
-            res.status(201).json({
-                message: "Notifikasi berhasil dikirim",
-                data: notification
-            });
+            const notification = await notificationService.sendNotification(userId, message);
+            return successResponse(res, 201, "Notifikasi berhasil dikirim", notification);
         } catch (error) {
-            res.status(400).json({ message: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengirim notifikasi");
         }
     },
 
@@ -20,34 +20,37 @@ const notificationController = {
         try {
             const userId = req.user.id;
             const notifications = await notificationService.getUserNotifications(userId);
-
-            res.status(200).json({
-                message: "Notifikasi berhasil diambil",
-                data: notifications,
-            });
+            return successResponse(res, 200, "Notifikasi berhasil diambil", notifications);
         } catch (error) {
-            console.error("[ERROR] Gagal mengambil notifikasi:", error);
-            res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil notifikasi");
         }
     },
 
-    markNotificationAsRead: async (req, res, next) => {
+    markNotificationAsRead: async (req, res) => {
         try {
             const { id } = req.params;
+            if (!id) {
+                return errorResponse(res, 400, "notificationId wajib diisi.");
+            }
+
             const response = await notificationService.markNotificationAsRead(parseInt(id));
-            res.status(response.status).json(response);
+            return successResponse(res, 200, "Notifikasi ditandai sebagai dibaca", response);
         } catch (error) {
-            next(error);
+            return errorResponse(res, error.status || 500, error.message || "Gagal menandai notifikasi");
         }
     },
 
-    deleteNotification: async (req, res, next) => {
+    deleteNotification: async (req, res) => {
         try {
             const { id } = req.params;
-            const response = await notificationService.deleteNotification(parseInt(id));
-            res.status(response.status).json(response);
+            if (!id) {
+                return errorResponse(res, 400, "notificationId wajib diisi.");
+            }
+
+            await notificationService.deleteNotification(parseInt(id));
+            return successResponse(res, 200, "Notifikasi berhasil dihapus");
         } catch (error) {
-            next(error);
+            return errorResponse(res, error.status || 500, error.message || "Gagal menghapus notifikasi");
         }
     },
 };

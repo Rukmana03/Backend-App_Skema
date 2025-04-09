@@ -1,93 +1,59 @@
 const assignmentRepository = require("../repositories/assignmentRepository");
+const subjectRepository = require("../repositories/subjectRepository");
 const notificationService = require("../services/notificationService");
 const folderHelper = require("../utils/folderHelper");
-const { PrismaClient, Role } = require("@prisma/client");
-const prisma = new PrismaClient();
-
-const validAssignmentTypes = ["Daily", "Weekly"];
-const validTaskCategories = ["Essay", "MultipleChoice", "Project"];
+const { assignmentValidator, updateAssignment  } = require("../validations/assignmentValidator");
+const { throwError } = require("../utils/responseHandler");
 
 const assignmentService = {
-    createAssignment: async (assignmentData) => {
-        try {
-            console.log("[DEBUG] Data dari Request:", assignmentData);
+    createAssignment: async (data) => {
+        // ✨ Validasi request
+        const { error } = assignmentValidator.validate(data);
+        if (error) throwError(400, error.details[0].message);
 
-            const { title, subjectClassId, teacherId, deadline, assignmentType, taskCategory } = assignmentData;
-            if (!title || !subjectClassId || !teacherId) throw new Error("Title, subjectClassId, dan teacherId wajib diisi.");
+        const { title, subjectClassId, teacherId } = data;
 
-            console.log("[DEBUG] Validasi assignmentType dan taskCategory...");
-            if (!validAssignmentTypes.includes(assignmentType)) throw new Error(`Invalid assignmentType.`);
-            if (!validTaskCategories.includes(taskCategory)) throw new Error(`Invalid taskCategory.`);
+        // ✨ Cek duplikat assignment (title unik per subjectClass)
+        const existingAssignment = await assignmentRepository.findAssignmentByTitleAndClass(title, subjectClassId);
+        if (existingAssignment) throwError(400, `Assignment "${title}" sudah ada.`);
 
-            console.log("[DEBUG] Validasi deadline...");
-            const deadlineDate = new Date(deadline);
-            if (isNaN(deadlineDate.getTime()) || deadlineDate <= new Date()) throw new Error("Deadline harus valid.");
+        // ✨ Ambil subjectClass + relasinya
+        const subjectClass = await subjectRepository.getSubjectClassWithDetails(subjectClassId);
+        if (!subjectClass) throwError(404, "SubjectClass tidak ditemukan.");
+        if (!subjectClass.class) throwError(404, "Class tidak ditemukan.");
+        if (!subjectClass.subject) throwError(404, "Subject tidak ditemukan.");
 
-            console.log("[DEBUG] Mengecek apakah assignment sudah ada...");
-            const existingAssignment = await assignmentRepository.findAssignmentByTitleAndClass(title, subjectClassId);
-            if (existingAssignment) throw new Error(`Assignment "${title}" sudah ada.`);
+        const { schoolId } = subjectClass.class;
+        const subjectId = subjectClass.subject.id;
 
-            console.log("[DEBUG] Mengambil subjectClass dari database...");
-            const subjectClass = await prisma.subjectClass.findUnique({
-                where: { id: Number(subjectClassId) },
-                include: {
-                    class: { include: { studentClasses: true } },
-                    subject: true
-                }
-            });
+        // ✨ Simpan assignment baru
+        const assignment = await assignmentRepository.createAssignment({
+            ...data
+        });
 
-            if (!subjectClass) throw new Error("SubjectClass tidak ditemukan.");
-            if (!subjectClass.class) throw new Error("Class tidak ditemukan.");
-            if (!subjectClass.subject) throw new Error("Subject tidak ditemukan.");
+        // ✨ Buat folder assignment
+        folderHelper.createAssignmentFolder(
+            schoolId,
+            subjectClass.class.id,
+            subjectId,
+            assignment.id
+        );
 
-            const schoolId = subjectClass.class.schoolId;
-            const subjectId = subjectClass.subject.id; // ✅ Pastikan subjectId dideklarasikan
-
-            if (!schoolId) throw new Error("School ID tidak ditemukan dalam class.");
-            if (!subjectId) throw new Error("subjectId tidak ditemukan dalam SubjectClass.");
-            console.log("[DEBUG] schoolId:", schoolId);
-            console.log("[DEBUG] subjectId:", subjectId);
-
-            const assignment = await assignmentRepository.createAssignment({
-                title,
-                description: assignmentData.description,
-                deadline,
-                assignmentType,
-                taskCategory,
-                subjectClassId,
-                teacherId
-            });
-
-            console.log("[DEBUG] Assignment berhasil dibuat:", assignment);
-
-            // ✅ Perbaiki pemanggilan folder helper
-            folderHelper.createAssignmentFolder(
-                schoolId,
-                subjectClass.class.id,
-                subjectId,  // ✅ Gunakan subjectId, bukan subjectClassId
-                assignment.id
-            );
-
-            console.log("[DEBUG] Mengambil siswa aktif...");
-            const activeStudents = subjectClass.class.studentClasses?.filter(student => student.status === "Active") || [];
-            if (activeStudents.length > 0) {
-                console.log("[DEBUG] Mengirim notifikasi ke siswa aktif...");
-                await Promise.all(
-                    activeStudents.map(student =>
-                        notificationService.sendNotification(student.studentId, `Tugas baru "${title}" telah ditambahkan.`)
+        // ✨ Kirim notifikasi ke student aktif
+        const activeStudents = subjectClass.class.studentClasses?.filter(sc => sc.status === "Active") || [];
+        if (activeStudents.length > 0) {
+            await Promise.all(
+                activeStudents.map(student =>
+                    notificationService.sendNotification(
+                        student.studentId,
+                        `Tugas baru "${title}" telah ditambahkan.`
                     )
-                );
-            } else {
-                console.log("[DEBUG] Tidak ada siswa aktif, tidak ada notifikasi dikirim.");
-            }
-
-            return assignment;
-        } catch (error) {
-            console.error("[ERROR] Gagal membuat assignment:", error.message);
-            throw new Error(error.message);
+                )
+            );
         }
-    },
 
+        return assignment;
+    },
 
     getAllAssignments: async () => {
         const assignments = await assignmentRepository.getAllAssignments();
@@ -119,6 +85,15 @@ const assignmentService = {
     },
 
     updateAssignment: async (id, data) => {
+        // Validasi input update assignment
+        const { error } = updateAssignment.validate(data);
+        if (error) throwError(400, error.details[0].message);
+
+        // Pastikan assignment ada
+        const existingAssignment = await assignmentRepository.getAssignmentById(id);
+        if (!existingAssignment) throwError(404, "Assignment tidak ditemukan.");
+
+        // Update assignment
         return await assignmentRepository.updateAssignment(id, data);
     },
 
@@ -128,8 +103,3 @@ const assignmentService = {
 };
 
 module.exports = assignmentService;
-
-
-// const addComment = async (assignmentId, userId, content) => {
-//     return await assignmentRepository.addComment(assignmentId, userId, content);
-// };

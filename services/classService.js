@@ -1,101 +1,121 @@
 const classRepository = require("../repositories/classRepository");
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
-const { throwError } = require("../utils/responeHandler");
+const { throwError } = require("../utils/responseHandler");
 const folderHelper = require("../utils/folderHelper");
+const { createClassSchema, addStudentSchema } = require("../validations/classValidation");
 
 const classService = {
   createClass: async (data) => {
+    const { error } = createClassSchema.validate(data);
+    if (error) throwError(400, error.details[0].message);
+
     const { schoolId, className } = data;
-    if (!schoolId || !className) {
-      throw new Error("School ID dan nama kelas wajib diisi.");
-    }
+
     const existingClass = await classRepository.findClassByNameAndSchool(schoolId, className);
-    if (existingClass) {
-      throw new Error("Nama kelas sudah digunakan dalam sekolah ini. Gunakan nama lain.");
-    }
+    if (existingClass) throwError(400, "Nama kelas sudah digunakan dalam sekolah ini. Gunakan nama lain.");
+
     const newClass = await classRepository.createClass({
       schoolId,
       className,
-      status: "Active" 
+      status: "Active"
     });
 
     folderHelper.createClassFolder(newClass.schoolId, newClass.id);
     return newClass;
   },
 
-  getAllClasses: async () => {
-    const classes = await classRepository.getAllClasses();
-    return classes;
-  },
-
-  getClassById: async (id) => {
-    return await classRepository.getClassById(id);
-  },
-
   updateClass: async (id, data) => {
+    await classService.getClassById(id);
     return await classRepository.updateClass(id, data);
   },
 
   deleteClass: async (id) => {
+    await classService.getClassById(id);
     return await classRepository.deleteClass(id);
   },
 
-  addStudentToClass: async (classId, studentId) => {
-    // Cek apakah kelas ada
-    const existingClass = await prisma.class.findUnique({
-      where: { id: Number(classId) },
-    });
-    if (!existingClass) {
-      throwError(404, "Class not found");
-    }
+  addStudentToClass: async (data) => {
+    const { error } = addStudentSchema.validate(data);
+    if (error) throwError(400, error.details[0].message);
 
-    // Cek apakah murid sudah terdaftar di kelas mana pun dengan status "Active"
-    const activeStudent = await prisma.studentClass.findFirst({
-      where: {
-        studentId: Number(studentId),
-        status: "Active", // Hanya cek murid yang statusnya masih aktif
-      },
-    });
+    const { classId, studentId } = data;
 
-    if (activeStudent) {
+    const existingClass = await classRepository.getClassById(classId);
+    if (!existingClass || existingClass.deletedAt) throwError(404, "Class not found");
+
+    const activeStudent = await classRepository.getActiveStudentClass(classId);
+    if (activeStudent.find(s => s.studentId === Number(studentId))) {
       throwError(400, "Student is already assigned to another class. Deactivate the previous class first.");
     }
 
-    // Cek apakah murid sudah ada dalam kelas ini (baik active atau inactive)
-    const existingStudent = await prisma.studentClass.findFirst({
-      where: { classId: Number(classId), studentId: Number(studentId) },
-    });
-
-    if (existingStudent) {
+    const existingStudent = await classRepository.getClassDetails(classId);
+    if (existingStudent?.studentClasses?.some(sc => sc.studentId === Number(studentId))) {
       throwError(400, "Student is already in this class");
     }
 
-    // Tambahkan murid ke kelas dengan status "Active"
-    return await prisma.studentClass.create({
-      data: {
-        classId: Number(classId),
-        studentId: Number(studentId),
-        status: "Active",
-      },
-    });
+    return await classRepository.addStudentToClass(classId, studentId);
   },
 
   deactivateStudentInClass: async (classId, studentId) => {
+    if (!classId || !studentId) throwError(400, "classId dan studentId wajib diisi");
+
     const result = await classRepository.deactivateStudentInClass(classId, studentId);
     if (result.count === 0) {
       throwError(400, "Student is either not in this class or already inactive.");
     }
-
     return { message: "Student has been deactivated from the class." };
   },
 
-  getClassWithMembers: async (classId) => {
-    const classData = await classRepository.getClassDetails(classId);
+  moveStudent: async (studentId, newClassId) => {
+    if (!studentId || !newClassId) throwError(400, "studentId dan newClassId wajib diisi");
 
-    if (!classData) {
-      throwError(404, "Class not found");
-    }
+    const activeClass = await classRepository.getActiveStudentClass(studentId);
+    if (!activeClass.length) throwError(400, "Siswa tidak ditemukan dalam kelas aktif mana pun.");
+
+    const newClass = await classRepository.getClassById(newClassId);
+    if (!newClass || newClass.status !== "Active") throwError(400, "Kelas tujuan tidak aktif atau tidak ditemukan.");
+
+    await classRepository.moveStudent(activeClass[0].id, newClassId);
+    return { message: "Siswa berhasil dipindahkan ke kelas baru." };
+  },
+
+  getActiveStudentsInClass: async (classId) => {
+    if (!classId) throwError(400, "classId wajib diisi");
+
+    const students = await classRepository.getActiveStudentClass(classId);
+    if (!students.length) throwError(404, "Tidak ada siswa aktif dalam kelas ini.");
+
+    return students.map((sc) => ({
+      id: sc.Student.id,
+      username: sc.Student.username,
+      email: sc.Student.email,
+    }));
+  },
+
+  getSubjectsByClassId: async (classId) => {
+    if (!classId) throwError(400, "classId wajib diisi");
+
+    const subjects = await classRepository.getSubjectsByClassId(classId);
+    if (!subjects.length) throwError(404, "Tidak ada subject dalam kelas ini.");
+
+    return subjects.map((subjectClass) => ({
+      id: subjectClass.subject.id,
+      subjectName: subjectClass.subject.subjectName,
+      teacher: subjectClass.teacher
+        ? {
+          id: subjectClass.teacher.id,
+          username: subjectClass.teacher.username,
+          email: subjectClass.teacher.email
+        }
+        : null
+    }));
+  },
+
+  getClassWithMembers: async (classId) => {
+    if (!classId) throwError(400, "classId wajib diisi");
+
+    const classData = await classRepository.getClassDetails(classId);
+    if (!classData) throwError(404, "Class not found");
+
     return {
       id: classData.id,
       className: classData.className,
@@ -116,106 +136,22 @@ const classService = {
             username: sc.teacher.username,
             email: sc.teacher.email,
           }
-          : null, // Jika teacher tidak ada
+          : null,
       })),
     };
   },
 
-  moveStudent: async (studentId, newClassId) => {
-    studentId = Number(studentId);
-    newClassId = Number(newClassId);
-
-    // Cek apakah siswa saat ini ada di kelas aktif
-    const currentEnrollment = await classRepository.getActiveStudentClass(studentId);
-    if (!currentEnrollment) {
-      throw new Error("Siswa tidak ditemukan dalam kelas aktif mana pun.");
-    }
-
-    // Cek apakah kelas tujuan aktif
-    const newClass = await classRepository.getClassById(newClassId);
-    if (!newClass || newClass.status !== "Active") {
-      throw new Error("Kelas tujuan tidak aktif atau tidak ditemukan.");
-    }
-
-    // Pindahkan siswa ke kelas baru
-    await classRepository.moveStudent(currentEnrollment.id, newClassId);
-
-    return { message: "Siswa berhasil dipindahkan ke kelas baru." };
+  getAllClasses: async () => {
+    return await classRepository.getAllClasses();
   },
 
-  getActiveStudentsInClass: async (classId) => {
-    classId = Number(classId);
+  getClassById: async (id) => {
+    if (!id) throwError(400, "id wajib diisi");
 
-    if (isNaN(classId)) {
-      throw new Error("classId harus berupa angka.");
-    }
-
-    const students = await classRepository.getActiveStudentClass(classId);
-
-    if (students.length === 0) {
-      throw new Error("Tidak ada siswa aktif dalam kelas ini.");
-    }
-
-    return students.map((studentClass) => ({
-      id: studentClass.Student.id,
-      name: studentClass.Student.name,
-      email: studentClass.Student.email,
-    }));
+    const classData = await classRepository.getClassById(id);
+    if (!classData || classData.deletedAt) throwError(404, "Class not found");
+    return classData;
   },
-
-  getSubjectsByClassId: async (classId) => {
-    classId = Number(classId);
-
-    if (isNaN(classId)) {
-      throw new Error("classId harus berupa angka.");
-    }
-
-    const subjects = await classRepository.getSubjectsByClassId(classId);
-
-    if (!subjects.length) {
-      throw new Error("Tidak ada subject dalam kelas ini.");
-    }
-
-    return subjects.map((subjectClass) => ({
-      id: subjectClass.subject.id,
-      Subjectname: subjectClass.subject.subjectName,
-      teacher: subjectClass.teacher
-        ? {
-          id: subjectClass.teacher.id,
-          username: subjectClass.teacher.username,
-          email: subjectClass.teacher.email
-        }
-        : null
-    }));
-  },
-
 };
 
 module.exports = classService;
-
-// addTeacherToClass: async (classId, teacherId) => {
-//   // Cek apakah kelas ada
-//   const existingClass = await prisma.class.findUnique({
-//     where: { id: Number(classId) },
-//   });
-//   if (!existingClass) {
-//     throwError(404, "Class not found");
-//   }
-
-//   // Cek apakah guru sudah ada dalam kelas
-//   const existingTeacher = await prisma.subjectClass.findFirst({
-//     where: { classId: Number(classId), teacherId: Number(teacherId) },
-//   });
-
-//   if (existingTeacher) {
-//     throwError(400, "Teacher is already assigned to this class");
-//   }
-
-//   // Tambahkan guru ke kelas
-//   return await prisma.subjectClass.create({
-//     data: {
-//       classId: Number(classId),
-//       teacherId: Number(teacherId),
-//     },
-//   });
-// },

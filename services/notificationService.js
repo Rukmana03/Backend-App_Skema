@@ -1,42 +1,35 @@
 const notificationRepository = require("../repositories/notificationRepository");
-const { successResponse, throwError } = require("../utils/responeHandler");
+const { throwError } = require("../utils/responseHandler");
+const { createNotificationSchema, notificationIdSchema } = require("../validations/notificationValidation");
 
 const notificationService = {
-    sendNotification: async (userId, message) => {
-        if (!userId || !message) {
-            throw new Error("User ID dan pesan diperlukan");
-        }
+    sendNotification: async (payload) => {
+        const { error } = createNotificationSchema.validate(payload);
+        if (error) throwError(400, error.details[0].message);
 
-        return await notificationRepository.createNotification(userId, message);
+        const notification = await notificationRepository.createNotification(payload.userId, payload.message);
+        return notification;
     },
 
     getUserNotifications: async (userId) => {
-
-        const notifications = await notificationRepository.getNotificationsByUser(userId);
-
-        if (!Array.isArray(notifications) || notifications.length === 0) {
-            return { success: true, message: "Tidak ada notifikasi ditemukan", data: [] };
-        }
-
-        notifications.forEach((notification, index) => {
-            if (!notification.status) {
-                notification.status = "Unread";
-            }
-        });
-
-        return { data: notifications };
+        if (!userId) throwError(400, "User ID diperlukan");
+        return await notificationRepository.getNotificationsByUser(userId);
     },
 
     markNotificationAsRead: async (notificationId) => {
-        const notification = await notificationRepository.markAsRead(notificationId);
-        return successResponse(200, "Notifikasi ditandai sebagai dibaca", notification);
+        const { error } = notificationIdSchema.validate({ notificationId });
+        if (error) throwError(400, error.details[0].message);
+
+        return await notificationRepository.markAsRead(notificationId);
     },
 
     deleteNotification: async (notificationId) => {
+        const { error } = notificationIdSchema.validate({ notificationId });
+        if (error) throwError(400, error.details[0].message);
+
         await notificationRepository.deleteNotification(notificationId);
-        return successResponse(200, "Notifikasi dihapus");
+        return;
     },
-    
 };
 
 module.exports = notificationService;

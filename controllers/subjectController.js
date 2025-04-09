@@ -1,72 +1,33 @@
-const subjectRepository = require("../repositories/subjectRepository");
-const { throwError, errorResponse, successResponse } = require("../utils/responeHandler");
 const subjectService = require("../services/subjectService");
+const { errorResponse, successResponse } = require("../utils/responseHandler");
 
 const subjectController = {
     createSubject: async (req, res) => {
         try {
-            const { subjectName, description, teacherId, classId, } = req.body;
-
+            const { subjectName, description, classId, teacherId } = req.body;
             const subjectData = await subjectService.createSubject(subjectName, description, classId, teacherId);
-            console.log("[DEBUG] Subject Data:", subjectData);
-
-            res.status(201).json({
-                message: "Subject created successfully",
-                data: {
-                    id: subjectData.newSubject.id,
-                    subjectName: subjectData.newSubject.subjectName,
-                    description: subjectData.newSubject.description,
-                    classId: subjectData.newSubjectClass.classId,
-                    subjectClassId: subjectData.newSubjectClass.id,
-                    teacher: {
-                        id: teacherId,
-                    },
-                },
-            });
+            return successResponse(res, 201, "Subject created successfully", subjectData);
         } catch (error) {
-            res.status(error.statusCode || 500).json({ error: error.message });
+            return errorResponse(res, error.statusCode || 500, error.message);
         }
     },
 
     getAllSubjects: async (req, res) => {
         try {
             const subjects = await subjectService.getAllSubjects();
-
-            if (!subjects || subjects.length === 0) {
-                return res.status(404).json({
-                    message: "No subjects found",
-                    data: []
-                });
-            }
-
-            res.status(200).json({
-                message: "Subjects retrieved successfully",
-                data: subjects
-            });
-
+            return successResponse(res, 200, "Subjects retrieved successfully", subjects);
         } catch (error) {
-            console.error("Get All Subjects Error:", error);
-            res.status(500).json({
-                error: "Internal Server Error",
-                details: error.message
-            });
+            return errorResponse(res, error.statusCode || 500, error.message);
         }
     },
 
     getSubjectById: async (req, res) => {
         try {
             const { id } = req.params;
-            console.log("Controller received ID:", id); // Debugging
-
-            const subject = await subjectRepository.findSubjectById(id);
-
-            if (!subject) {
-                return res.status(404).json({ message: "Subject not found" });
-            }
-
-            res.json(subject);
+            const subject = await subjectService.getSubjectById(id);
+            return successResponse(res, 200, "Subject found", subject);
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return errorResponse(res, error.statusCode || 500, error.message);
         }
     },
 
@@ -74,18 +35,10 @@ const subjectController = {
         try {
             const { id } = req.params;
             const { subjectName, description } = req.body;
-
-            console.log("Received Data:", { id, subjectName, description });
-
             const updatedSubject = await subjectService.updateSubject(id, subjectName, description);
-
-            res.status(200).json({
-                message: "Subject updated successfully",
-                data: updatedSubject,
-            });
+            return successResponse(res, 200, "Subject updated successfully", updatedSubject);
         } catch (error) {
-            console.error("Update Subject Error:", error);
-            res.status(400).json({ error: error.message });
+            return errorResponse(res, error.statusCode || 500, error.message);
         }
     },
 
@@ -93,41 +46,32 @@ const subjectController = {
         try {
             const { id } = req.params;
             await subjectService.deleteSubject(id);
-            res.status(200).json({ message: "Subject deleted successfully" });
+            return successResponse(res, 200, "Subject deleted successfully");
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            return errorResponse(res, error.statusCode || 500, error.message);
         }
     },
 
     addTeacherToSubject: async (req, res) => {
         try {
-            const { id: subjectId } = req.params;
+            const { id } = req.params;
             const { teacherId } = req.body;
-
-            console.log("Received Data:", { subjectId, teacherId });
-
-            const subject = await subjectService.addTeacherToSubject(subjectId, teacherId);
-
-            res.status(200).json({
-                message: "Teacher added to subject successfully",
-                data: subject,
-            });
+            const subject = await subjectService.addTeacherToSubject(id, teacherId);
+            return successResponse(res, 200, "Teacher added to subject successfully", subject);
         } catch (error) {
-            res.status(400).json({ error: error.message });
+            return errorResponse(res, error.statusCode || 500, error.message);
         }
     },
 
     getTeachersBySubject: async (req, res) => {
         try {
-            const { id: subjectId } = req.params;
-            const teachers = await subjectService.getTeachersBySubject(subjectId);
-
+            const { id } = req.params;
+            const teachers = await subjectService.getTeachersBySubject(id);
             return successResponse(res, 200, "Teachers found", teachers);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message);
+            return errorResponse(res, error.statusCode || 500, error.message);
         }
     },
 };
-
 
 module.exports = subjectController;

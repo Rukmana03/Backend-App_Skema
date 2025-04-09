@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const schoolController = require("../controllers/schoolController");
+const { authenticate, roleMiddleware } = require("../middleware/authMiddleware");
 
-router.get("/", schoolController.getAllSchools);
-router.get("/:id", schoolController.getSchoolById);
-router.post("/", schoolController.createSchool);
-router.put("/:id", schoolController.updateSchool);
-router.delete("/:id", schoolController.deleteSchool);
+router.post("/", authenticate, roleMiddleware("Admin"), schoolController.createSchool);
+router.put("/:id", authenticate, roleMiddleware("Admin"), schoolController.updateSchool);
+router.get("/", authenticate, roleMiddleware("Admin"), schoolController.getAllSchools);
+router.get("/:id", authenticate, roleMiddleware("Admin"), schoolController.getSchoolById);
+router.delete("/:id", authenticate, roleMiddleware("Admin"), schoolController.deleteSchool);
 
 module.exports = router;

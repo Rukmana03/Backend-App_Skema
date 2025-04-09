@@ -34,6 +34,7 @@ model User {
 
 model School {
   id          Int      @id @default(autoincrement())
+  npsn        String   @unique
   name        String
   address     String?
   city        String
@@ -41,13 +42,15 @@ model School {
   postalCode  String
   phoneNumber String?
   email       String?
-  status      Status   @default(Active)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   deletedAt   DateTime?
 
   classes     Class[]
+
+  @@map("schools")
 }
+
 
 model Class {
   id             Int            @id @default(autoincrement())
@@ -214,6 +217,7 @@ model FileStorage {
 
   @@map("file_storages")
 }
+
 model AssignmentFile {
   id           Int  @id @default(autoincrement())
   assignmentId Int
@@ -235,17 +239,21 @@ model SubmissionFile {
 
   @@map("submission_files")
 }
+
 model Profile {
-  bio            String?
-  name           String    @db.VarChar(100)
-  createdAt      DateTime  @default(now())
-  deletedAt      DateTime?
   id             Int       @id @default(autoincrement())
-  identityNumber String    @unique
-  profilePhoto   String?
-  updatedAt      DateTime  @updatedAt
   userId         Int       @unique
+  name           String    @db.VarChar(100)
+  identityNumber String?    @unique
+  bio            String?
+  profilePhoto   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+  
   users          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
 }
 
 enum Role {
@@ -265,7 +273,6 @@ enum AssignmentType {
 }
 
 enum SubmissionStatus {
-  Pending
   Submitted
   Graded
 }

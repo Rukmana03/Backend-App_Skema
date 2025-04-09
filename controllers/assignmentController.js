@@ -1,91 +1,51 @@
 const assignmentService = require("../services/assignmentService");
-const { errorResponse, successResponse } = require("../utils/responeHandler")
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const { successResponse, errorResponse } = require("../utils/responseHandler");
 
 const assignmentController = {
     createAssignment: async (req, res) => {
         try {
-            console.log("[DEBUG] Data dari Request:", req.body); // 🔹 Debugging
-
-            const { subjectClassId, teacherId, title, description, deadline, assignmentType, taskCategory } = req.body;
-
-            if (!subjectClassId || !teacherId) {
-                return res.status(400).json({ error: "subjectClassId dan teacherId harus diisi." });
-            }
-
-            const newAssignment = await assignmentService.createAssignment({
-                subjectClassId,
-                teacherId,
-                title,
-                description,
-                deadline,
-                assignmentType,
-                taskCategory,
-            });
-
-            res.status(201).json(newAssignment);
+            const newAssignment = await assignmentService.createAssignment(req.body);
+            return successResponse(res, 201, "Tugas berhasil dibuat", newAssignment);
         } catch (error) {
-            console.error("[ERROR] Gagal membuat assignment:", error.message); // 🔹 Debugging error
-            res.status(500).json({ error: error.message || "Terjadi kesalahan saat membuat tugas." });
+            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat membuat tugas");
         }
     },
 
     getAllAssignments: async (req, res) => {
         try {
             const assignments = await assignmentService.getAllAssignments();
-
-            if (assignments.length === 0) {
-                return res.status(404).json({ message: "No assignments found" });
-            }
-            res.status(200).json({ message: "Assignments retrieved successfully", data: assignments });
+            return successResponse(res, 200, "Tugas berhasil diambil", assignments);
         } catch (error) {
-            console.error("Error in getAllAssignments:", error);
-            res.status(500).json({ message: "Internal server error", error: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat mengambil tugas");
         }
     },
 
     getAssignmentById: async (req, res) => {
         try {
             const assignment = await assignmentService.getAssignmentById(req.params.id);
-            if (!assignment) return res.status(404).json({ success: false, message: "Tugas tidak ditemukan" });
-
-            res.status(200).json({ success: true, message: "Detail tugas berhasil diambil", data: assignment });
+            return successResponse(res, 200, "Detail tugas berhasil diambil", assignment);
         } catch (error) {
-            console.error("Error in getAssignmentById:", error);
-            res.status(500).json({ success: false, message: "Terjadi kesalahan" });
+            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat mengambil detail tugas");
         }
     },
 
     updateAssignment: async (req, res) => {
         try {
             const updatedAssignment = await assignmentService.updateAssignment(req.params.id, req.body);
-            res.status(200).json({ success: true, message: "Tugas berhasil diperbarui", data: updatedAssignment });
+            return successResponse(res, 200, "Tugas berhasil diperbarui", updatedAssignment);
         } catch (error) {
-            console.error("Error in updateAssignment:", error);
-            res.status(500).json({ success: false, message: "Terjadi kesalahan" });
+            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat memperbarui tugas");
         }
     },
 
     deleteAssignment: async (req, res) => {
         try {
             await assignmentService.deleteAssignment(req.params.id);
-            res.status(200).json({ success: true, message: "Tugas berhasil dihapus" });
+            return successResponse(res, 200, "Tugas berhasil dihapus");
         } catch (error) {
-            console.error("Error in deleteAssignment:", error);
-            res.status(500).json({ success: false, message: "Terjadi kesalahan" });
+            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat menghapus tugas");
         }
     },
 };
 
 module.exports = assignmentController;
-
-// const addComment = async (req, res) => {
-//     try {
-//         const userId = req.user.id;
-//         const comment = await assignmentService.addComment(req.params.id, userId, req.body.content);
-//         res.status(201).json(comment);
-//     } catch (error) {
-//         res.status(500).json({ error: error.message });
-//     }
-// };

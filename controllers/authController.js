@@ -1,6 +1,5 @@
 const authService = require("../services/authService");
-const { errorResponse, successResponse } = require("../utils/responeHandler");
-const authRepository = require("../repositories/authRepository")
+const { errorResponse, successResponse } = require("../utils/responseHandler");
 
 const authController = {
   loginUser: async (req, res) => {
@@ -8,9 +7,8 @@ const authController = {
       const { email, password } = req.body;
 
       const { user, accessToken, refreshToken } = await authService.loginUser({ email, password });
-      console.log("Generated Access Token:", accessToken);
 
-      return successResponse(res, 200, "Login successfull", {
+      return successResponse(res, 200, "Login berhasil", {
         id: user.id,
         username: user.username,
         email: user.email,
@@ -22,7 +20,7 @@ const authController = {
     } catch (error) {
       return errorResponse(
         res,
-        error.status || 500,
+        error.statusCode || 500,
         error.message || "Internal Server Error"
       );
     }
@@ -33,37 +31,27 @@ const authController = {
       const userId = req.user.id;
 
       const result = await authService.logoutUser(userId);
-
-      await authRepository.deleteRefreshToken(userId);
-      console.log(`Refresh token has been cleared for user ID: ${userId}`);
-
-      res.json(result);
+      return successResponse(res, 200, "Logout berhasil", result);
     } catch (error) {
-      res.status(error.statusCode || 500).json({ message: error.message });
+      return errorResponse(res, error.statusCode || 500, error.message);
     }
   },
 
   refreshToken: async (req, res) => {
     try {
-      console.log("[DEBUG] Body Request:", req.body);
       const { refreshToken } = req.body;
 
-      if (!refreshToken) {
-        return res.status(401).json({ error: "Refresh token is required" });
-      }
+      const { accessToken, refreshToken: newRefreshToken } =
+        await authService.refreshAccessToken(refreshToken);
 
-      console.log("[DEBUG] Refresh Token Diterima:", refreshToken);
-
-      // ✅ Panggil fungsi refreshAccessToken dari authService
-      const { accessToken } = await authService.refreshAccessToken(refreshToken);
-
-      return res.json({ accessToken });
+      return successResponse(res, 200, "Token berhasil diperbarui", {
+        accessToken,
+        refreshToken: newRefreshToken,
+      });
     } catch (error) {
-      console.error("[ERROR] Gagal Refresh Token:", error.message);
-      return res.status(403).json({ error: error.message });
+      return errorResponse(res, error.statusCode || 403, error.message);
     }
   },
-
 };
 
 module.exports = authController;

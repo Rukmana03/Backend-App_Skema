@@ -1,37 +1,37 @@
 const fs = require("fs");
 const path = require("path");
 
-// ✅ Fungsi umum untuk membuat folder jika belum ada
+
+// Fungsi untuk membuat folder jika belum ada
 const createFolderIfNotExists = (folderPath) => {
     if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
+        console.log(`[INFO] Folder dibuat: ${folderPath}`);
     }
 };
 
-// ✅ Fungsi umum untuk membuat folder berdasarkan path dinamis
+// Fungsi untuk membuat folder berdasarkan path dinamis
 const createDynamicFolder = (...segments) => {
     const folderPath = path.join("uploads", ...segments);
     createFolderIfNotExists(folderPath);
-    console.log(`[INFO] Folder dibuat: ${folderPath}`);
+    return folderPath; // Mengembalikan path untuk digunakan di tempat lain
 };
 
-// ✅ Fungsi spesifik untuk masing-masing entitas
+// Helper untuk membuat folder tertentu
 const folderHelper = {
-    createSchoolFolder: (schoolId) => 
-        createDynamicFolder(`school-${schoolId}`),
+    createSchoolFolder: (schoolId) => createDynamicFolder(`school-${schoolId}`),
 
-    createClassFolder: (schoolId, classId) => 
+    createClassFolder: (schoolId, classId) =>
         createDynamicFolder(`school-${schoolId}`, `class-${classId}`),
 
-    createSubjectFolder: (schoolId, classId, subjectId) => 
+    createSubjectFolder: (schoolId, classId, subjectId) =>
         createDynamicFolder(`school-${schoolId}`, `class-${classId}`, `subject-${subjectId}`),
 
     createAssignmentFolder: (schoolId, classId, subjectId, assignmentId) =>
-        createDynamicFolder(`school-${schoolId}`, `class-${classId}`, `subject-${subjectId}`, `assignments-${assignmentId}`),
+        createDynamicFolder(`school-${schoolId}`, `class-${classId}`, `subject-${subjectId}`, `assignment-${assignmentId}`),
 
-    createSubmissionFolder: (schoolId, classId, subjectId, submissionId) =>
-        createDynamicFolder(`school-${schoolId}`, `class-${classId}`, `subject-${subjectId}`, `submissions-${submissionId}`)
+    createSubmissionFolder: (schoolId, classId, subjectId, assignmentId, submissionId) =>
+        createDynamicFolder(`school-${schoolId}`, `class-${classId}`, `subject-${subjectId}`, `assignment-${assignmentId}`, `submission-${submissionId}`)
 };
 
-// ✅ Ekspor fungsi agar bisa dipakai di Service atau Controller
 module.exports = folderHelper;

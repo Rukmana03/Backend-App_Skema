@@ -16,13 +16,13 @@ const authenticate = (req, res, next) => {
 const roleMiddleware = (...requiredRoles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: "Unauthorized: You must be logged in to access this resource." });
     }
 
     if (!requiredRoles.includes(req.user.role)) {
-      return res
-        .status(403)
-        .json({ error: "Forbidden: You do not have access to this resource" });
+      return res.status(403).json({
+        error: `Forbidden: You are not authorized. Only ${requiredRoles.join(" or ")} can access this resource.`,
+      });
     }
 
     next();
@@ -40,3 +40,4 @@ module.exports = { authenticate, roleMiddleware };
 //   }
 //   next();
 // };
+

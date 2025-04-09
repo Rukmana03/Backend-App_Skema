@@ -1,93 +1,56 @@
 const commentService = require("../services/commentService");
-const assignmentRepository = require("../repositories/assignmentRepository");
-const submissionRepository = require("../repositories/submissionRepository");
+const { successResponse, errorResponse } = require("../utils/responseHandler");
 
 const commentController = {
-    // 🔹 Tambah komentar ke assignment (Hanya Teacher)
+    // ⬇️ Comment ke Assignment
     addCommentToAssignment: async (req, res) => {
         try {
+            const userId = req.user.id;
             const { assignmentId } = req.params;
             const { text } = req.body;
-            const userId = req.user.id; // Ambil dari req.user
 
-            // Validasi input
-            if (!text) {
-                return res.status(400).json({ success: false, message: "Komentar tidak boleh kosong" });
-            }
-
-            // Cek apakah assignment ada
-            const assignment = await assignmentRepository.getAssignmentById(assignmentId);
-            if (!assignment) {
-                return res.status(404).json({ success: false, message: "Assignment tidak ditemukan" });
-            }
-
-            // Pastikan hanya Teacher yang bisa memberi komentar
-            if (req.user.role !== "Teacher") {
-                return res.status(403).json({ success: false, message: "Hanya Teacher yang boleh memberi komentar pada tugas" });
-            }
-
-            // Tambahkan komentar
             const comment = await commentService.addComment(assignmentId, null, userId, text);
-
-            return res.status(201).json({ success: true, message: "Komentar berhasil ditambahkan", data: comment });
+            return successResponse(res, 201, "Komentar berhasil ditambahkan ke assignment", comment);
         } catch (error) {
-            console.error("Error in addCommentToAssignment:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message || "Unknown error" });
+            return errorResponse(res, error.status || 500, error.message || "Gagal menambahkan komentar");
         }
     },
 
-    // 🔹 Ambil komentar dari assignment
+    // ⬇️ Comment ke Submission
+    addCommentToSubmission: async (req, res) => {
+        try {
+            const userId = req.user.id;
+            const { submissionId } = req.params;
+            const { text } = req.body;
+
+            const comment = await commentService.addComment(null, submissionId, userId, text);
+            return successResponse(res, 201, "Komentar berhasil ditambahkan ke submission", comment);
+        } catch (error) {
+            return errorResponse(res, error.status || 500, error.message || "Gagal menambahkan komentar");
+        }
+    },
+
+    // ⬇️ Get Comments from Assignment
     getCommentsByAssignment: async (req, res) => {
         try {
             const { assignmentId } = req.params;
-            const response = await commentService.getCommentsByAssignment(assignmentId);
-            return res.status(200).json(response);
+            const comments = await commentService.getCommentsByAssignment(Number(assignmentId));
+            return successResponse(res, 200, comments.message, comments.data);
         } catch (error) {
-            console.error("Error in getCommentsByAssignment:", error);
-            return res.status(500).json({ message: "Terjadi kesalahan", error: error.message || "Unknown error" });
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil komentar");
         }
     },
 
-    // 🔹 Tambah komentar ke submission (Bisa oleh Teacher atau Murid)
-    addCommentToSubmission: async (req, res) => {
-        try {
-            const { submissionId } = req.params;
-            const { text } = req.body;
-            const userId = req.user.id; // Ambil dari req.user
-
-            // Validasi input
-            if (!text) {
-                return res.status(400).json({ success: false, message: "Komentar tidak boleh kosong" });
-            }
-
-            // Pastikan submission ada
-            const submission = await submissionRepository.getSubmissionById(submissionId);
-            if (!submission) {
-                return res.status(404).json({ success: false, message: "Submission tidak ditemukan" });
-            }
-
-            // Tambahkan komentar ke submission
-            const comment = await commentService.addComment(null, submissionId, userId, text);
-
-            return res.status(201).json({ success: true, message: "Komentar berhasil ditambahkan", data: comment });
-        } catch (error) {
-            console.error("Error in addCommentToSubmission:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message || "Unknown error" });
-        }
-    },
-
-    // 🔹 Ambil komentar dari submission
+    // ⬇️ Get Comments from Submission
     getCommentsBySubmission: async (req, res) => {
         try {
             const { submissionId } = req.params;
-            const response = await commentService.getCommentsBySubmission(submissionId);
-            return res.status(200).json(response);
+            const comments = await commentService.getCommentsBySubmission(Number(submissionId));
+            return successResponse(res, 200, comments.message, comments.data);
         } catch (error) {
-            console.error("Error in getCommentsBySubmission:", error);
-            return res.status(500).json({ message: "Terjadi kesalahan", error: error.message || "Unknown error" });
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil komentar");
         }
     },
-
 };
 
 module.exports = commentController;

@@ -1,82 +1,119 @@
 const gradeService = require("../services/gradeService");
+const { successResponse, errorResponse } = require("../utils/responseHandler");
 
 const gradeController = {
     createGrade: async (req, res) => {
         try {
-            const newGrade = await gradeService.createGrade(req.body);
-            res.status(201).json({ message: "Grade successfully added", data: newGrade });
+            const teacherId = req.user.id;
+            const { submissionId, score, feedback } = req.body;
+
+            if (!submissionId || score === undefined) {
+                return errorResponse(res, 400, "submissionId dan score wajib diisi.");
+            }
+
+            const newGrade = await gradeService.createGrade({ submissionId, teacherId, score, feedback });
+            return successResponse(res, 201, "Grade berhasil ditambahkan", newGrade);
         } catch (error) {
-            res.status(400).json({ message: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Gagal membuat grade");
         }
     },
 
     getGradeBySubmissionId: async (req, res) => {
         try {
             const { submissionId } = req.params;
+
+            if (!submissionId) {
+                return errorResponse(res, 400, "submissionId diperlukan.");
+            }
+
             const grade = await gradeService.getGradeBySubmissionId(Number(submissionId));
-            res.status(200).json({ message: "Grade retrieved successfully", data: grade });
+            return successResponse(res, 200, "Grade berhasil diambil", grade);
         } catch (error) {
-            res.status(404).json({ message: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil grade");
         }
     },
 
     updateGrade: async (req, res) => {
         try {
             const { id } = req.params;
+
+            if (!id) {
+                return errorResponse(res, 400, "gradeId diperlukan.");
+            }
+
             const updatedGrade = await gradeService.updateGrade(Number(id), req.body);
-            res.status(200).json({ message: "Grade updated successfully", data: updatedGrade });
+            return successResponse(res, 200, "Grade berhasil diperbarui", updatedGrade);
         } catch (error) {
-            console.error("[ERROR] Gagal mengupdate grade:", error.message);
-            res.status(500).json({ message: "Gagal mengupdate grade", error: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Gagal memperbarui grade");
         }
     },
 
     deleteGrade: async (req, res) => {
         try {
             const { id } = req.params;
+
+            if (!id) {
+                return errorResponse(res, 400, "gradeId diperlukan.");
+            }
+
             await gradeService.deleteGrade(Number(id));
-            res.status(200).json({ message: "Grade deleted successfully" });
+            return successResponse(res, 200, "Grade berhasil dihapus");
         } catch (error) {
-            res.status(400).json({ message: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Gagal menghapus grade");
         }
     },
 
-    getGradesByClassId: async (req, res, next) => {
+    getGradesByClassId: async (req, res) => {
         try {
             const { classId } = req.params;
-            const response = await gradeService.getGradesByClassId(Number(classId));
-            res.status(response.status).json(response);
+
+            if (!classId) {
+                return errorResponse(res, 400, "classId diperlukan.");
+            }
+
+            const grades = await gradeService.getGradesByClassId(Number(classId));
+            return successResponse(res, 200, "Grades berhasil diambil", grades);
         } catch (error) {
-            next(error);
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil grades");
         }
     },
 
-    getGradesByStudentId: async (req, res, next) => {
+    getGradesByStudentId: async (req, res) => {
         try {
             const { studentId } = req.params;
-            const response = await gradeService.getGradesByStudentId(Number(studentId));
-            res.status(response.status).json(response);
+
+            if (!studentId) {
+                return errorResponse(res, 400, "studentId diperlukan.");
+            }
+
+            const grades = await gradeService.getGradesByStudentId(Number(studentId));
+            return successResponse(res, 200, "Grades berhasil diambil", grades);
         } catch (error) {
-            next(error);
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil grades");
         }
     },
 
-    getGradesByAssignmentId: async (req, res, next) => {
+    getGradesByAssignmentId: async (req, res) => {
         try {
             const { assignmentId } = req.params;
-            const response = await gradeService.getGradesByAssignmentId(Number(assignmentId));
-            res.status(response.status).json(response);
+
+            if (!assignmentId) {
+                return errorResponse(res, 400, "assignmentId diperlukan.");
+            }
+
+            const grades = await gradeService.getGradesByAssignmentId(Number(assignmentId));
+            return successResponse(res, 200, "Grades berhasil diambil", grades);
         } catch (error) {
-            next(error);
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil grades");
         }
     },
 
-    getMyGrades: async (req, res, next) => {
+    getMyGrades: async (req, res) => {
         try {
-            const response = await gradeService.getGradesByStudentId(req.user.id);
-            res.status(response.status).json(response);
+            const grades = await gradeService.getGradesByStudentId(req.user.id);
+            return successResponse(res, 200, "Grades berhasil diambil", grades);
         } catch (error) {
-            next(error);
+            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil grades");
         }
     },
 };

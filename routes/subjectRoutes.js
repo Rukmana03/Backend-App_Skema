@@ -6,8 +6,8 @@ const router = express.Router();
 
 
 router.post("/", authenticate, roleMiddleware("Admin"), subjectController.createSubject);
-router.get("/", subjectController.getAllSubjects);
-router.get("/:id", subjectController.getSubjectById);
+router.get("/", authenticate, roleMiddleware("Admin"), subjectController.getAllSubjects);
+router.get("/:id", authenticate, roleMiddleware("Admin"), subjectController.getSubjectById);
 router.put("/:id", authenticate, roleMiddleware("Admin"), subjectController.updateSubject);
 router.delete("/:id", authenticate, roleMiddleware("Admin"), subjectController.deleteSubject);
 router.post("/:id/teachers", authenticate, roleMiddleware("Admin"), subjectController.addTeacherToSubject);

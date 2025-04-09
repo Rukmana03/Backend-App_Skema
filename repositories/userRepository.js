@@ -1,15 +1,25 @@
-const { PrismaClient, Role } = require("@prisma/client");
+const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const userRepository = {
-  createUser: (username, email, password, role) =>
-    prisma.user.create({ data: { username, email, password, role } }),
+  createUser: async (username, email, password, role) => {
+    return await prisma.user.create({
+      data: { username, email, password, role },
+    });
+  },
 
-  updateUser: (id, updateData) =>
-    prisma.user.update({ where: { id: parseInt(id, 10) }, data: updateData }),
+  updateUser: async (id, updateData) => {
+    return await prisma.user.update({
+      where: { id: Number(id) },
+      data: updateData,
+    });
+  },
 
-  deleteUser: (id) =>
-    prisma.user.delete({ where: { id: parseInt(id, 10) } }),
+  deleteUser: async (id) => {
+    return await prisma.user.delete({
+      where: { id: Number(id) },
+    });
+  },
 
   findAllUsers: async () => {
     return await prisma.user.findMany({
@@ -18,19 +28,33 @@ const userRepository = {
         username: true,
         email: true,
         role: true,
-      }
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
     });
   },
 
-  findUserByEmail: (email) => prisma.user.findUnique({ where: { email } }),
+  findUserByEmail: async (email) => {
+    return await prisma.user.findUnique({
+      where: { email },
+    });
+  },
 
-  findUserById: (id) =>
-    prisma.user.findUnique({ where: { id: Number(id) },
-      select: { id: true, email: true, refreshToken: true, role: true }
-    }),
+  findUserById: async (id) => {
+    return await prisma.user.findUnique({
+      where: { id: Number(id) },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        refreshToken: true,
+      },
+    });
+  },
 
-  findUsersByRole: (role) => {
-    return prisma.user.findMany({
+  findUsersByRole: async (role) => {
+    return await prisma.user.findMany({
       where: { role },
       select: {
         id: true,
@@ -40,7 +64,6 @@ const userRepository = {
       },
     });
   },
-
 };
 
 module.exports = userRepository;

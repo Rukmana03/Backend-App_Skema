@@ -1,65 +1,83 @@
 const bcrypt = require("bcryptjs");
 const userRepository = require("../repositories/userRepository");
-const { throwError } = require("../utils/responeHandler");
+const profileRepository = require("../repositories/profileRepository");
+const { createUserSchema, updateUserSchema } = require("../validations/userValidation");
+const { throwError } = require("../utils/responseHandler");
 
-const hashPassword = async (password) => {
-  return await bcrypt.hash(password, 10);
-};
+const hashPassword = async (password) => await bcrypt.hash(password, 10);
 
 const userService = {
-createUser: async ({ username, email, password, role }) => {
-  console.log("Received role:", role);
+  createUser: async (userData) => {
+    const { error } = createUserSchema.validate(userData);
+    if (error) throwError(400, error.details[0].message);
 
-  if (!username || !email || !password || !role) {
-    throwError(400, "All fields are required");
-  }
+    const { username, email, password, role, name, identityNumber, bio, profilePhoto } = userData;
 
-  // Pastikan role hanya bisa "Teacher" atau "Student"
-  const validRoles = ["Teacher", "Student"];
-  if (!validRoles.includes(role)) {
-    throwError(400, "Only Teacher or Student roles are allowed");
-  }
+    // Cek apakah email sudah terdaftar
+    const existingUser = await userRepository.findUserByEmail(email);
+    if (existingUser) throwError(400, "Email is already registered.");
 
-  // Cek apakah email sudah ada di database
-  const existingUser = await userRepository.findUserByEmail(email);
-  if (existingUser) throwError(400, "Email is already registered");
+    const hashedPassword = await hashPassword(password);
+    const newUser = await userRepository.createUser(username, email, hashedPassword, role);
 
-  const hashedPassword = await hashPassword(password);
+    // Buat profil hanya jika ada data profil yang diberikan
+    let profile = null;
+    if (name || identityNumber || bio || profilePhoto) {
+      profile = await profileRepository.createProfile({
+        userId: newUser.id,
+        name,
+        identityNumber,
+        bio,
+        profilePhoto,
+      });
+    }
+    return { user: newUser, profile };
+  },
 
-  // Guru dan murid tidak perlu verifikasi email
-  return await userRepository.createUser(username, email, hashedPassword, role);
-},
+  updateUser: async (id, updateData) => {
+    const { error } = updateUserSchema.validate(updateData);
+    if (error) throwError(400, error.details[0].message);
 
-updateUser: async (id, updateData) => {
-  const user = await userRepository.findUserById(id);
-  if (!user) throwError(404, "User not found");
+    const user = await userRepository.findUserById(id);
+    if (!user) throwError(404, "User not found.");
 
-  return await userRepository.updateUser(id, updateData);
-},
+    // Cek apakah email baru sudah digunakan oleh user lain
+    if (updateData.email) {
+      const emailExists = await userRepository.findUserByEmail(updateData.email);
+      if (emailExists && emailExists.id !== id) {
+        throwError(400, "Email is already registered by another user.");
+      }
+    }
+    return await userRepository.updateUser(id, updateData);
+  },
 
-deleteUser: async (id) => {
-  const user = await userRepository.findUserById(id);
-  if (!user) throwError(404, "User not found");
+  deleteUser: async (id) => {
+    const user = await userRepository.findUserById(id);
+    if (!user) throwError(404, "User not found.");
 
-  return await userRepository.deleteUser(id);
-},
+    return await userRepository.deleteUser(id);
+  },
 
-getAllUsers: async () => {
-  return await userRepository.findAllUsers();
-},
+  getAllUsers: async () => {
+    const users = await userRepository.findAllUsers();
+    if (!users || users.length === 0) throwError(404, "No users found.");
 
-getUserById: async (id) => {
-  const user = await userRepository.findUserById(id);
-  if (!user) throwError(404, "User not found");
-  return user;
-},
+    return users;
+  },
 
-getUsersByRole: async (role) => {
-  console.log("Fetching users with role:", role); // Debug log
-  return await userRepository.findUsersByRole(role);
-},
+  getUserById: async (id) => {
+    const user = await userRepository.findUserById(id);
+    if (!user) throwError(404, "User not found.");
 
+    return user;
+  },
+
+  getUsersByRole: async (role) => {
+    const users = await userRepository.findUsersByRole(role);
+    if (!users || users.length === 0) throwError(404, `No users found with role: ${role}`);
+
+    return users;
+  },
 };
-
 
 module.exports = userService;

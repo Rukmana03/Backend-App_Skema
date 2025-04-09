@@ -1,29 +1,23 @@
 const classService = require("../services/classService");
-const { errorResponse, successResponse, } = require("../utils/responeHandler");
+const { successResponse, errorResponse } = require("../utils/responseHandler");
 
 const classController = {
+
   createClass: async (req, res) => {
     try {
       const newClass = await classService.createClass(req.body);
-      res.status(201).json({ success: true, message: "Class created successfully", data: newClass });
+      return successResponse(res, 201, "Class created successfully", newClass);
     } catch (error) {
-      console.error("[ERROR] Gagal membuat kelas:", error.message);
-      res.status(400).json({ success: false, message: "Error creating class", error: error.message });
+      return errorResponse(res, error.status || 400, error.message);
     }
   },
 
   getAllClasses: async (req, res) => {
     try {
       const classes = await classService.getAllClasses();
-
-      if (!classes || classes.length === 0) {
-        return res.status(404).json({ message: "Data tidak ditemukan" });
-      }
-
-      res.status(200).json({ message: "Data berhasil ditemukan", data: classes });
+      return successResponse(res, 200, "Data berhasil ditemukan", classes);
     } catch (error) {
-
-      res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
+      return errorResponse(res, error.status || 500, error.message);
     }
   },
 
@@ -31,9 +25,9 @@ const classController = {
     try {
       const { id } = req.params;
       const classData = await classService.getClassById(Number(id));
-      res.status(200).json({ success: true, data: classData });
+      return successResponse(res, 200, "Data berhasil ditemukan", classData);
     } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return errorResponse(res, error.status || 400, error.message);
     }
   },
 
@@ -41,9 +35,9 @@ const classController = {
     try {
       const { id } = req.params;
       const updatedClass = await classService.updateClass(Number(id), req.body);
-      res.status(200).json({ success: true, data: updatedClass });
+      return successResponse(res, 200, "Class updated successfully", updatedClass);
     } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return errorResponse(res, error.status || 400, error.message);
     }
   },
 
@@ -51,99 +45,75 @@ const classController = {
     try {
       const { id } = req.params;
       await classService.deleteClass(Number(id));
-      res.status(200).json({ success: true, message: "Kelas berhasil dihapus" });
+      return successResponse(res, 200, "Class deleted successfully");
     } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
+      return errorResponse(res, error.status || 400, error.message);
     }
   },
 
   addStudentToClass: async (req, res) => {
     try {
-      const { id } = req.params; // ID kelas
+      const { id } = req.params;
       const { studentId } = req.body;
-      await classService.addStudentToClass(id, studentId);
+
+      await classService.addStudentToClass({ classId: Number(id), studentId: Number(studentId) });
+
       return successResponse(res, 200, "Student berhasil ditambahkan ke kelas");
     } catch (error) {
-      return errorResponse(res, error.status || 500, error.message);
+      return errorResponse(res, error.status || 400, error.message);
     }
   },
 
   deactivateStudentInClass: async (req, res) => {
     try {
       const { classId, studentId } = req.params;
-      const response = await classService.deactivateStudentInClass(classId, studentId);
-      return successResponse(res, 200, "Student berhasil dinonaktifkan", response);
+      const result = await classService.deactivateStudentInClass(classId, studentId);
+      return successResponse(res, 200, "Student berhasil dinonaktifkan", result);
     } catch (error) {
-      return errorResponse(res, error.status || 500, error.message);
+      return errorResponse(res, error.status || 400, error.message);
     }
   },
 
   getClassMembers: async (req, res) => {
     try {
-      const { id } = req.params; // ID kelas
+      const { id } = req.params;
       const classDetails = await classService.getClassWithMembers(id);
-      res.status(200).json({ message: "Data berhasil ditemukan", data: classDetails });
+      return successResponse(res, 200, "Data berhasil ditemukan", classDetails);
     } catch (error) {
-      res.status(500).json({ message: "Terjadi kesalahan pada server", error: error.message });
+      return errorResponse(res, error.status || 500, error.message);
     }
   },
 
   moveStudentToClass: async (req, res) => {
     try {
       const { studentId, newClassId } = req.body;
-
-      if (!studentId || !newClassId) {
-        return res.status(400).json({ message: "studentId dan newClassId diperlukan." });
-      }
       const result = await classService.moveStudent(studentId, newClassId);
-      res.status(200).json({ message: result.message });
+      return successResponse(res, 200, result.message);
     } catch (error) {
-      res.status(500).json({ message: "Gagal memindahkan siswa", error: error.message });
+      return errorResponse(res, error.status || 500, error.message);
     }
   },
 
   getActiveStudentsInClass: async (req, res) => {
     try {
       const { id } = req.params;
-      const classId = Number(id);
-
-      if (!classId) {
-        return res.status(400).json({ success: false, message: "classId diperlukan." });
-      }
-
-      const students = await classService.getActiveStudentsInClass(classId);
-      res.status(200).json({ success: true, data: students });
+      const students = await classService.getActiveStudentsInClass(Number(id));
+      return successResponse(res, 200, "Data berhasil ditemukan", students);
     } catch (error) {
-      res.status(500).json({ success: false, message: "Gagal mendapatkan siswa aktif", error: error.message });
+      return errorResponse(res, error.status || 500, error.message);
     }
   },
 
   getSubjectsByClassId: async (req, res) => {
     try {
       const { id } = req.params;
-
-      if (!id) {
-        return res.status(400).json({ message: "classId diperlukan." });
-      }
-
       const subjects = await classService.getSubjectsByClassId(id);
-      res.status(200).json({ message: "Data berhasil ditemukan", data: subjects });
+      return successResponse(res, 200, "Data berhasil ditemukan", subjects);
     } catch (error) {
-      res.status(500).json({ success: false, message: "Gagal mendapatkan subject kelas", error: error.message });
+      return errorResponse(res, error.status || 500, error.message);
     }
   },
 
 };
 
 module.exports = classController;
-
-// addTeacherToClass: async (req, res) => {
-//   try {
-//     const { id } = req.params; // ID kelas
-//     const { teacherId } = req.body;
-//     await classService.addTeacherToClass(id, teacherId);
-//     return successResponse(res, 200, "Teacher berhasil ditambahkan ke kelas");
-//   } catch (error) {
-//     return errorResponse(res, error.status || 500, error.message);
-//   }
-// },

@@ -2,73 +2,56 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const gradeRepository = {
-    createGrade: async ({ submissionId, teacherId, score, feedback }) => {
-        if (!submissionId) {
-            throw new Error("submissionId is required.");
-        }
-
-        console.log("[DEBUG] submissionId:", submissionId);
-
-        const submission = await prisma.submission.findUnique({
-            where: { id: Number(submissionId) },
-            include: { grades: true },
-        });
-
-        if (!submission) {
-            throw new Error("Submission tidak ditemukan");
-        }
-
-        if (submission.grades.length > 0) {
-            throw new Error("Submission sudah dinilai sebelumnya");
-        }
-
-        const newGrade = await prisma.grade.create({
+    createGrade: async (data) => {
+        return await prisma.grade.create({
             data: {
-                submissionId: Number(submissionId),
-                teacherId: Number(teacherId),
-                score: Number(score),
-                feedback,
+                ...data,
                 gradedDate: new Date(),
             },
         });
+    },
 
-        return newGrade;
+    getSubmissionWithAssignmentAndGrades: async (submissionId) => {
+        return await prisma.submission.findUnique({
+            where: { id: Number(submissionId) },
+            include: { assignment: true, grades: true },
+        });
+    },
+
+    updateSubmissionStatus: async (submissionId, newStatus) => {
+        return await prisma.submission.update({
+            where: { id: Number(submissionId) },
+            data: { status: newStatus },
+            select: { id: true, status: true },
+        });
     },
 
     getGradeBySubmissionId: async (submissionId) => {
-        return await prisma.grade.findFirst({
-            where: { submissionId },
+        return await prisma.grade.findUnique({
+            where: { submissionId: Number(submissionId) },
             include: {
                 teacher: { select: { id: true, username: true } },
             },
         });
     },
 
-    updateSubmissionStatus: async (submissionId, newStatus) => {
-        console.log("[DEBUG] Mengupdate submissionId:", submissionId, "ke status:", newStatus);
-        return await prisma.submission.update({
-            where: { id: Number(submissionId) },
-            data: { status: newStatus }
-        });
-    },
-
     updateGrade: async (gradeId, data) => {
-        console.log("[DEBUG] Memperbarui gradeId:", gradeId, "dengan data:", data);
         return await prisma.grade.update({
             where: { id: Number(gradeId) },
-            data
+            data,
+            include: { teacher: { select: { id: true, username: true } } },
         });
     },
 
     getGradeById: async (gradeId) => {
         return await prisma.grade.findUnique({
-            where: { id: gradeId },
+            where: { id: Number(gradeId) },
         });
     },
 
     deleteGrade: async (gradeId) => {
         return await prisma.grade.delete({
-            where: { id: gradeId },
+            where: { id: Number(gradeId) },
         });
     },
 
@@ -76,7 +59,7 @@ const gradeRepository = {
         return await prisma.grade.findMany({
             where: {
                 submission: {
-                    assignment: { classId },
+                    assignment: { classId: Number(classId) },
                 },
             },
             include: {
@@ -91,10 +74,10 @@ const gradeRepository = {
     getGradesByStudentId: async (studentId) => {
         return await prisma.grade.findMany({
             where: {
-                submission: { studentId },
+                submission: { studentId: Number(studentId) },
             },
             include: {
-                submission: { include: { assignment: true } },
+                submission: { include: { assignment: { select: { id: true, title: true } } } },
                 teacher: { select: { id: true, username: true } },
             },
         });
@@ -103,7 +86,7 @@ const gradeRepository = {
     getGradesByAssignmentId: async (assignmentId) => {
         return await prisma.grade.findMany({
             where: {
-                submission: { assignmentId },
+                submission: { assignmentId: Number(assignmentId) },
             },
             include: {
                 submission: { include: { student: { select: { id: true, username: true } } } },

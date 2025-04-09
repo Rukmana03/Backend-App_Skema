@@ -2,8 +2,8 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const notificationRepository = {
-    createNotification: async (userId, message) => {
-        return await prisma.notification.create({
+    async createNotification(userId, message) {
+        return prisma.notification.create({
             data: {
                 userId,
                 message,
@@ -13,36 +13,32 @@ const notificationRepository = {
         });
     },
 
-    getNotificationsByUser: async (userId) => {
-        const notifications = await prisma.notification.findMany({
-            where: { userId },
+    async getNotificationsByUser(userId) {
+        return prisma.notification.findMany({
+            where: {
+                userId,
+                deletedAt: null 
+            },
             select: {
                 id: true,
                 userId: true,
                 message: true,
-                status: true, // Pastikan status selalu diambil
+                status: true,
                 sentDate: true,
             },
             orderBy: { createdAt: "desc" },
         });
-
-        await prisma.notification.updateMany({
-            where: { userId, status: "Unread" },
-            data: { status: "Read" },
-        });
-
-        return notifications;
     },
 
-    markAsRead: async (notificationId) => {
-        return await prisma.notification.update({
+    async markAsRead(notificationId) {
+        return prisma.notification.update({
             where: { id: notificationId },
             data: { status: "Read" },
         });
     },
 
-    deleteNotification: async (notificationId) => {
-        return await prisma.notification.delete({
+    async deleteNotification(notificationId) {
+        return prisma.notification.delete({
             where: { id: notificationId },
         });
     },
