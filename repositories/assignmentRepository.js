@@ -11,31 +11,30 @@ const assignmentRepository = {
     deleteAssignment: (id) =>
         prisma.assignment.delete({ where: { id } }),
 
-    findSubjectClassById: (id) => 
+    findSubjectClassById: (id) =>
         prisma.subjectClass.findUnique({ where: { id } }),
 
-    findTeacherById: (id) => 
+    findTeacherById: (id) =>
         prisma.user.findUnique({ where: { id } }),
 
     findAssignmentByTitleAndClass: (title, subjectClassId) =>
         prisma.assignment.findFirst({ where: { title, subjectClassId } }),
 
-    getAllAssignments: () => 
+    getAllAssignments: () =>
         prisma.assignment.findMany({
-        where: { deletedAt: null },
-        include: {
-            subjectClass: {
-                include: {
-                    subject: { select: { id: true, subjectName: true } },
-                    class: { select: { id: true, className: true } },
-                    teacher: { select: { id: true, username: true, email: true } }
+            where: { deletedAt: null },
+            include: {
+                subjectClass: {
+                    include: {
+                        subject: { select: { id: true, subjectName: true } },
+                        class: { select: { id: true, className: true } },
+                        teacher: { select: { id: true, username: true, email: true } }
+                    }
                 }
-            }
-        },
-        orderBy: { createdAt: "desc" }
-    }),
+            },
+        }),
 
-    getAssignmentById: (id) => 
+    getAssignmentById: (id) =>
         prisma.assignment.findUnique({ where: { id } }),
 
     getStudentsBySubjectClassId: (subjectClassId) =>

@@ -12,7 +12,7 @@ const notificationService = {
     },
 
     getUserNotifications: async (userId) => {
-        if (!userId) throwError(400, "User ID diperlukan");
+        if (!userId) throwError(400, "User ID required");
         return await notificationRepository.getNotificationsByUser(userId);
     },
 

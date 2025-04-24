@@ -59,14 +59,19 @@ const profileService = {
         return { message: "Profile deleted successfully." };
     },
 
-    getAllProfiles: async (requestingUserRole) => {
-        if (requestingUserRole !== "Admin") {
-            throwError(403, "Only admins can access all profiles.");
-        }
-
+    getAllProfiles: async () => {
         const profiles = await profileRepository.getAllProfiles();
         if (!profiles || profiles.length === 0) throwError(404, "No profiles found.");
-        return profiles;
+
+        return profiles.map((pf) => ({
+            id: pf.id,
+            name: pf.name,
+            identityNumber: pf.identityNumber,
+            bio: pf.bio,
+            profilePhoto: pf.profilePhoto,
+            userId: pf.userId,
+            users: pf.users
+        }) );
     },
 
     getProfileByUserId: async (requestingUserId, targetUserId) => {

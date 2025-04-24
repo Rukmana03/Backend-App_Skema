@@ -1,0 +1,150 @@
+openapi: 3.0.0
+info:
+  title: School Management API
+  version: 1.0.0
+  description: School management system API documentation
+
+paths:
+  /api/auth/login:
+    post:
+      description: Used for user login
+      tags:
+       - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: Email user
+                password:
+                  type: string
+                  description: Password user
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  username:
+                    type: string
+                  email:
+                    type: string
+                  role:
+                    type: string
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        '400':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Internal Server Error
+        '401':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Internal Server Error
+        '429':
+          description: Too many login attempts. Please try again in 5 minutes
+          content:
+            application/json:
+              schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Too many login attempts. Please try again in 5 minutes
+        '500':
+          description: Internal Server Error
+
+  /api/auth/refreshToken:
+      post:
+        description: Use a valid refresh token to get a new access token and refresh token.
+        tags:
+          - Auth
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - refreshToken
+                properties:
+                  refreshToken:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        responses:
+          '200':
+            description: Token updated successfully
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    accessToken:
+                      type: string
+                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    refreshToken:
+                      type: string
+                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+          '401':
+            description: Unauthorized
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                examples:
+                  missingToken:
+                    summary: Refresh token tidak diberikan
+                    value:
+                      message: Refresh token required
+                  invalidToken:
+                    summary: Refresh token tidak valid
+                    value:
+                      message: Refresh token is invalid
+                  expiredToken:
+                    summary: Refresh token kedaluwarsa
+                    value:
+                      message: Refresh token is invalid or expired
+                  limitReached:
+                    summary: Batas percobaan refresh token tercapai
+                    value:
+                      message: Refresh token limit reached. Please login again
+          '500':
+              description: Internal Server Error
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Internal Server Error
+
+            

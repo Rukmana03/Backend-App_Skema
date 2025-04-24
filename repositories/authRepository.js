@@ -13,6 +13,12 @@ const authRepository = {
       data: { refreshToken: token },
     }),
 
+  updateUserPassword: (userId, newPassword) =>
+    prisma.user.update({
+      where: { id: userId },
+      data: { password: newPassword },
+    }),
+
   findUserByRefreshToken: (token) =>
     prisma.user.findUnique({
       where: { refreshToken: token },

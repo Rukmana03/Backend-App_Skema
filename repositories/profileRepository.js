@@ -36,9 +36,8 @@ const profileRepository = {
     getAllProfiles: async () => {
         return await prisma.profile.findMany({
             include: {
-                users: { select: { id: true, username: true, email: true, role: true } },
+                users: { select: { username: true, email: true, role: true } },
             },
-            orderBy: { createdAt: "desc" },
         });
     },
 

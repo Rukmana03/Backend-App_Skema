@@ -17,7 +17,7 @@ const notificationRepository = {
         return prisma.notification.findMany({
             where: {
                 userId,
-                deletedAt: null 
+                deletedAt: null
             },
             select: {
                 id: true,
@@ -26,7 +26,6 @@ const notificationRepository = {
                 status: true,
                 sentDate: true,
             },
-            orderBy: { createdAt: "desc" },
         });
     },
 

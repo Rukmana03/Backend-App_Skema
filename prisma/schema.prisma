@@ -8,59 +8,59 @@ datasource db {
 }
 
 model User {
-  id             Int            @id @default(autoincrement())
-  username       String         @unique @db.VarChar(50)
-  email          String         @unique
-  password       String
-  role           Role
-  fcmToken       String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  deletedAt      DateTime?
-  refreshToken   String?        @unique
-  profile        Profile?
-  assignments    Assignment[]   @relation("TeacherAssignments")
-  comments       Comment[]
-  fileStorages   FileStorage[]
-  grades         Grade[]
-  notifications  Notification[]
-  studentClasses StudentClass[]
-  subjectClasses SubjectClass[]
-  
-  submissions    Submission[]
+  id              Int            @id @default(autoincrement())
+  username        String         @unique @db.VarChar(50)
+  email           String         @unique
+  password        String
+  role            Role
+  fcmToken        String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+  refreshToken    String?        @unique
+  refreshAttempts Int       @default(0)
+  assignments     Assignment[]   @relation("TeacherAssignments")
+  comments        Comment[]
+  fileStorages    FileStorage[]
+  grades          Grade[]
+  notifications   Notification[]
+  profile         Profile?
+  studentClasses  StudentClass[]
+  subjectClasses  SubjectClass[]
+  submissions     Submission[]
 
   @@map("users")
 }
 
 model School {
-  id          Int      @id @default(autoincrement())
-  npsn        String   @unique
+  id          Int       @id @default(autoincrement())
   name        String
+  npsn        String    @unique
   address     String?
   city        String
   province    String
   postalCode  String
   phoneNumber String?
   email       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
-
   classes     Class[]
 
   @@map("schools")
 }
-
 
 model Class {
   id             Int            @id @default(autoincrement())
   schoolId       Int
   className      String
   status         Status
+  academicYearId Int
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   deletedAt      DateTime?
 
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
   school         School         @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   studentClasses StudentClass[]
   subjectClasses SubjectClass[]
@@ -69,87 +69,108 @@ model Class {
 }
 
 model StudentClass {
-  id        Int      @id @default(autoincrement())
-  classId   Int
-  studentId Int
-  status    Status
-  joinedAt  DateTime @default(now())
+  id             Int          @id @default(autoincrement())
+  classId        Int
+  studentId      Int
+  joinedAt       DateTime     @default(now())
+  academicYearId Int
 
-  Class     Class    @relation(fields: [classId], references: [id])
-  Student   User     @relation(fields: [studentId], references: [id])
+  classStatus    ClassStatus  @default(Active)
+  subjectClasses SubjectClass[]
+  
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  class          Class        @relation(fields: [classId], references: [id])
+  student        User         @relation(fields: [studentId], references: [id])
 
+  @@unique([studentId, academicYearId, classStatus])
   @@map("student_classes")
 }
 
 model Subject {
-  id          Int          @id @default(autoincrement())
-  subjectName String
-  description String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  deletedAt   DateTime?
-
-  subjectClasses SubjectClass[] 
+  id             Int            @id @default(autoincrement())
+  subjectName    String
+  description    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+  subjectClasses SubjectClass[]
 
   @@map("subjects")
 }
 
+model AcademicYear {
+  id             Int            @id @default(autoincrement())
+  year           String         @unique
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  class Class[]
+  studentClasses StudentClass[]
+  subjectClasses SubjectClass[]
+
+  @@map("AcademicYear")
+}
+
 model SubjectClass {
-  id         Int      @id @default(autoincrement())
-  subjectId  Int
-  classId    Int
-  teacherId  Int
-  code       String   @unique
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now())
-  deletedAt  DateTime?
+  id               Int          @id @default(autoincrement())
+  subjectId        Int
+  classId          Int
+  teacherId        Int
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @default(now())
+  deletedAt        DateTime?
+  academicYearId   Int
+  subjectClassCode String       @unique
 
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
-  teacher User    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-
-  assignments Assignment[]
+  studentClasses   StudentClass[]
+  assignments      Assignment[]
+  academicYear     AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  class            Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject          Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacher          User         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
 
   @@map("subject_classes")
 }
 
 model Assignment {
-  id             Int            @id @default(autoincrement())
+  id             Int              @id @default(autoincrement())
   title          String
   description    String?
   subjectClassId Int
   teacherId      Int
-  deadline       DateTime       
+  deadline       DateTime
   assignmentType AssignmentType
   taskCategory   TaskCategory
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
   deletedAt      DateTime?
-
-  subjectClass SubjectClass @relation(fields: [subjectClassId], references: [id], onDelete: Cascade)
-  teacher      User         @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
-  submissions  Submission[]
-  comments     Comment[]
-  files        AssignmentFile[]
+  
+  files          AssignmentFile[]
+  subjectClass   SubjectClass     @relation(fields: [subjectClassId], references: [id], onDelete: Cascade)
+  teacher        User             @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
+  comments       Comment[]
+  submissions    Submission[]
 
   @@map("assignments")
 }
 
 model Submission {
   id             Int              @id @default(autoincrement())
-  assignmentId   Int              
-  studentId      Int               
+  assignmentId   Int
+  studentId      Int
   submissionDate DateTime
   status         SubmissionStatus
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   deletedAt      DateTime?
-
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  comments   Comment[]
-  grades     Grade[]
-  files      SubmissionFile[]
+  comments       Comment[]
+  grades         Grade[]
+  files          SubmissionFile[]
+  assignment     Assignment       @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student        User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@map("submissions")
 }
@@ -172,15 +193,15 @@ model Grade {
 
 model Comment {
   id           Int         @id @default(autoincrement())
-  userId         Int
-  submissionId   Int?
-  assignmentId   Int?
+  userId       Int
+  submissionId Int?
+  assignmentId Int?
   content      String
   commentDate  DateTime    @default(now())
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   deletedAt    DateTime?
-  assignment   Assignment?  @relation(fields: [assignmentId], references: [id])
+  assignment   Assignment? @relation(fields: [assignmentId], references: [id])
   submission   Submission? @relation(fields: [submissionId], references: [id])
   user         User        @relation(fields: [userId], references: [id])
 
@@ -202,40 +223,37 @@ model Notification {
 }
 
 model FileStorage {
-  id         Int       @id @default(autoincrement())
-  userId     Int
-  fileName   String
-  fileUrl    String
-  uploadDate DateTime
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  deletedAt  DateTime?
-
-  user       User      @relation(fields: [userId], references: [id])
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  fileName    String
+  fileUrl     String
+  uploadDate  DateTime
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
   assignments AssignmentFile[]
+  user        User             @relation(fields: [userId], references: [id])
   submissions SubmissionFile[]
 
   @@map("file_storages")
 }
 
 model AssignmentFile {
-  id           Int  @id @default(autoincrement())
+  id           Int         @id @default(autoincrement())
   assignmentId Int
   fileId       Int
-
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  file       FileStorage @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  assignment   Assignment  @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  file         FileStorage @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   @@map("assignment_files")
 }
 
 model SubmissionFile {
-  id           Int  @id @default(autoincrement())
+  id           Int         @id @default(autoincrement())
   submissionId Int
   fileId       Int
-
-  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  file       FileStorage @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  file         FileStorage @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  submission   Submission  @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@map("submission_files")
 }
@@ -244,13 +262,12 @@ model Profile {
   id             Int       @id @default(autoincrement())
   userId         Int       @unique
   name           String    @db.VarChar(100)
-  identityNumber String?    @unique
+  identityNumber String?   @unique
   bio            String?
   profilePhoto   String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
-  
   users          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("profiles")
@@ -286,4 +303,12 @@ enum TaskCategory {
   Essay
   MultipleChoice
   Project
+}
+
+enum ClassStatus {
+  Active
+  Promoted
+  Transferred
+  Graduated
+  DroppedOut
 }

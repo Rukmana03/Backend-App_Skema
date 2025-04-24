@@ -12,7 +12,7 @@ const submissionController = {
 
             return successResponse(res, 201, "Submission berhasil dibuat", submission);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat membuat submission");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 
@@ -22,16 +22,16 @@ const submissionController = {
             const submission = await submissionService.getSubmissionById(id);
             return successResponse(res, 200, "Detail submission berhasil diambil", submission);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat mengambil submission");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 
     getAllSubmissions: async (req, res) => {
         try {
             const submissions = await submissionService.getAllSubmissions();
-            return successResponse(res, 200, "Semua submission berhasil diambil", submissions);
+            return successResponse(res, 200, "Submissions retrieved successfully", submissions);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat mengambil submission");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 
@@ -41,7 +41,7 @@ const submissionController = {
             const updated = await submissionService.updateSubmission(id, req.body);
             return successResponse(res, 200, "Submission berhasil diperbarui", updated);
         } catch (error) {
-            return errorResponse(res, error.status || 400, error.message || "Terjadi kesalahan saat memperbarui submission");
+            return errorResponse(res, error.status || 400, error.message || "Internal server error");
         }
     },
 
@@ -54,7 +54,7 @@ const submissionController = {
 
             return successResponse(res, 200, "Submission berhasil dihapus", result);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat menghapus submission");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 
@@ -67,7 +67,7 @@ const submissionController = {
 
             return successResponse(res, 201, "Submission berhasil dikirim", submission);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Terjadi kesalahan saat mengirim submission");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 };

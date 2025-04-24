@@ -6,23 +6,22 @@ const notificationController = {
         try {
             const { userId, message } = req.body;
             if (!userId || !message) {
-                return errorResponse(res, 400, "userId dan message wajib diisi.");
+                return errorResponse(res, 400, "userId and message are required");
             }
-
             const notification = await notificationService.sendNotification(userId, message);
-            return successResponse(res, 201, "Notifikasi berhasil dikirim", notification);
+            return successResponse(res, 201, "Notification successfully sent", notification);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Gagal mengirim notifikasi");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 
     getUserNotifications: async (req, res) => {
         try {
-            const userId = req.user.id;
+            const userId = Number(req.params.userId);
             const notifications = await notificationService.getUserNotifications(userId);
-            return successResponse(res, 200, "Notifikasi berhasil diambil", notifications);
+            return successResponse(res, 200, "Notification successfully retrieved", notifications);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Gagal mengambil notifikasi");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 
@@ -30,13 +29,12 @@ const notificationController = {
         try {
             const { id } = req.params;
             if (!id) {
-                return errorResponse(res, 400, "notificationId wajib diisi.");
+                return errorResponse(res, 400, "notificationId required");
             }
-
             const response = await notificationService.markNotificationAsRead(parseInt(id));
-            return successResponse(res, 200, "Notifikasi ditandai sebagai dibaca", response);
+            return successResponse(res, 200, "Notifications are marked as read", response);
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Gagal menandai notifikasi");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 
@@ -44,13 +42,12 @@ const notificationController = {
         try {
             const { id } = req.params;
             if (!id) {
-                return errorResponse(res, 400, "notificationId wajib diisi.");
+                return errorResponse(res, 400, "notificationId required");
             }
-
             await notificationService.deleteNotification(parseInt(id));
-            return successResponse(res, 200, "Notifikasi berhasil dihapus");
+            return successResponse(res, 200, "Notification successfully deleted");
         } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Gagal menghapus notifikasi");
+            return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 };

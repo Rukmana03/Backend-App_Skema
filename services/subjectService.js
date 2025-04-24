@@ -1,72 +1,66 @@
 const subjectRepository = require("../repositories/subjectRepository");
-const userService = require("../services/userService");
-const userRepository = require("../repositories/userRepository");
-const folderHelper = require("../utils/folderHelper");
 const { throwError } = require("../utils/responseHandler");
 
 const subjectService = {
-    createSubject: async (subjectName, description, classId, teacherId) => {
-        if (!subjectName || !description || !classId || !teacherId) {
-            throwError(400, "Name, description, classId, and teacherId are required.");
+    createSubject: async (subjectName, description) => {
+        if (!subjectName || !description) {
+            throwError(400, "Subject name and description are required.");
         }
 
-        const parsedClassId = Number(classId);
-        const parsedTeacherId = Number(teacherId);
-        if (isNaN(parsedClassId) || isNaN(parsedTeacherId)) {
-            throwError(400, "classId and teacherId must be numbers.");
-        }
-
-        const existingSubject = await subjectRepository.getSubjectByName(subjectName);
-        if (existingSubject) {
+        const existing = await subjectRepository.getSubjectByName(subjectName);
+        if (existing) {
             throwError(400, "Subject with this name already exists.");
         }
 
-        const classData = await subjectRepository.findClassById(parsedClassId);
-        if (!classData) {
-            throwError(404, "Class not found.");
-        }
-
-        const teacher = await userService.getUserById(parsedTeacherId);
-        if (!teacher || teacher.role !== "Teacher") {
-            throwError(400, "Invalid teacher ID. User is not a teacher.");
-        }
-
-        const newSubject = await subjectRepository.createSubject(subjectName, description);
-        const code = `SUB-${newSubject.id}-${parsedClassId}-${parsedTeacherId}`;
-
-        const newSubjectClass = await subjectRepository.createSubjectClass(
-            newSubject.id, parsedClassId, parsedTeacherId, code
-        );
-
-        folderHelper.createSubjectFolder(classData.schoolId, parsedClassId, newSubjectClass.id);
-
-        return { newSubject, newSubjectClass };
+        return await subjectRepository.createSubject(subjectName, description);
     },
 
     getAllSubjects: async () => {
-        return await subjectRepository.findAllSubjects();
+        const subjects = await subjectRepository.getAllSubjects();
+        if (!subjects.length) { 
+            throwError(400, "No subjects found");
+        }
+
+        return subjects.map((sj) => ({
+            id: sj.id,
+            subjectName: sj.subjectName,
+            subjectClasses: sj.subjectClasses
+        }));
+        
     },
 
     getSubjectById: async (id) => {
         const parsedId = Number(id);
         if (isNaN(parsedId)) throwError(400, "Invalid subject ID.");
 
-        const subject = await subjectRepository.findSubjectById(parsedId);
+        const subject = await subjectRepository.getSubjectById(parsedId);
         if (!subject) throwError(404, "Subject not found.");
 
-        return subject;
+        return {
+            id: subject.id,
+            subjectName: subject.subjectName,
+            description: subject.description,
+            subjectClasses: subject.subjectClasses,
+        };
     },
 
     updateSubject: async (id, subjectName, description) => {
         const parsedId = Number(id);
         if (isNaN(parsedId)) throwError(400, "Invalid subject ID.");
 
-        const subjectExists = await subjectRepository.findSubjectById(parsedId);
-        if (!subjectExists) throwError(404, "Subject not found.");
+        const existingSubject = await subjectRepository.getSubjectById(parsedId);
+        if (!existingSubject) throwError(404, "Subject not found.");
+
+        if (subjectName && subjectName !== existingSubject.subjectName) {
+            const duplicate = await subjectRepository.getSubjectByName(subjectName);
+            if (duplicate && duplicate.id !== parsedId) {
+                throwError(400, "Subject name already exists.");
+            }
+        }
 
         return await subjectRepository.updateSubject(parsedId, {
-            subjectName: subjectName || subjectExists.subjectName,
-            description: description || subjectExists.description,
+            subjectName: subjectName || existingSubject.subjectName,
+            description: description || existingSubject.description,
             updatedAt: new Date()
         });
     },
@@ -75,39 +69,12 @@ const subjectService = {
         const parsedId = Number(id);
         if (isNaN(parsedId)) throwError(400, "Invalid subject ID.");
 
-        const subjectExists = await subjectRepository.findSubjectById(parsedId);
+        const subjectExists = await subjectRepository.getSubjectById(parsedId);
         if (!subjectExists) throwError(404, "Subject not found.");
 
         return await subjectRepository.deleteSubject(parsedId);
     },
 
-    addTeacherToSubject: async (subjectId, teacherId) => {
-        const parsedSubjectId = Number(subjectId);
-        const parsedTeacherId = Number(teacherId);
-
-        if (isNaN(parsedSubjectId) || isNaN(parsedTeacherId)) {
-            throwError(400, "Invalid subject ID or teacher ID");
-        }
-
-        const subject = await subjectRepository.findSubjectById(parsedSubjectId);
-        if (!subject) throwError(404, "Subject not found");
-
-        const user = await userRepository.findUserById(parsedTeacherId);
-        if (!user) throwError(404, "User not found");
-        if (user.role !== "Teacher") throwError(400, "Only teachers can be assigned to subjects");
-
-        return await subjectRepository.createSubjectClass(parsedSubjectId, null, parsedTeacherId, `SUB-${parsedSubjectId}-${teacherId}`);
-    },
-
-    getTeachersBySubject: async (subjectId) => {
-        const parsedSubjectId = Number(subjectId);
-        if (isNaN(parsedSubjectId)) throwError(400, "Invalid subject ID.");
-
-        const subject = await subjectRepository.getTeachersBySubjectId(parsedSubjectId);
-        if (!subject) throwError(404, "Subject not found");
-
-        return subject.users ? [subject.users] : [];
-    },
 };
 
 module.exports = subjectService;

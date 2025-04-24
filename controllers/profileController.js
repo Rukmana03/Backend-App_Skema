@@ -41,9 +41,7 @@ const profileController = {
 
     getAllProfiles: async (req, res) => {
         try {
-            const requestingUserRole = req.user.role;
-            const profiles = await profileService.getAllProfiles(requestingUserRole);
-
+            const profiles = await profileService.getAllProfiles();
             return successResponse(res, 200, "Profiles retrieved successfully", profiles);
         } catch (error) {
             return errorResponse(res, error.status || 500, error.message);

@@ -4,8 +4,8 @@ const { errorResponse, successResponse } = require("../utils/responseHandler");
 const subjectController = {
     createSubject: async (req, res) => {
         try {
-            const { subjectName, description, classId, teacherId } = req.body;
-            const subjectData = await subjectService.createSubject(subjectName, description, classId, teacherId);
+            const { subjectName, description } = req.body;
+            const subjectData = await subjectService.createSubject(subjectName, description);
             return successResponse(res, 201, "Subject created successfully", subjectData);
         } catch (error) {
             return errorResponse(res, error.statusCode || 500, error.message);
@@ -52,26 +52,6 @@ const subjectController = {
         }
     },
 
-    addTeacherToSubject: async (req, res) => {
-        try {
-            const { id } = req.params;
-            const { teacherId } = req.body;
-            const subject = await subjectService.addTeacherToSubject(id, teacherId);
-            return successResponse(res, 200, "Teacher added to subject successfully", subject);
-        } catch (error) {
-            return errorResponse(res, error.statusCode || 500, error.message);
-        }
-    },
-
-    getTeachersBySubject: async (req, res) => {
-        try {
-            const { id } = req.params;
-            const teachers = await subjectService.getTeachersBySubject(id);
-            return successResponse(res, 200, "Teachers found", teachers);
-        } catch (error) {
-            return errorResponse(res, error.statusCode || 500, error.message);
-        }
-    },
 };
 
 module.exports = subjectController;

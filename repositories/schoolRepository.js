@@ -26,7 +26,6 @@ const schoolRepository = {
         return prisma.school.findMany({
             where: { deletedAt: null },
             include: { classes: true },
-            orderBy: { createdAt: "desc" }
         });
     },
 

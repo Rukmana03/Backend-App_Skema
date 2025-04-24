@@ -5,6 +5,11 @@ const createClassSchema = Joi.object({
         'any.required': 'schoolId wajib diisi',
         'number.base': 'schoolId harus berupa angka',
     }),
+    academicYearId: Joi.number().integer().required().messages({
+        'any.required': 'academicYearId wajib diisi',
+        'number.base': 'academicYearId harus berupa angka',
+        'number.integer': 'academicYearId harus berupa bilangan bulat',
+    }),
     className: Joi.string().min(3).max(100).required().messages({
         'any.required': 'className wajib diisi',
         'string.base': 'className harus berupa string',
@@ -23,6 +28,11 @@ const addStudentSchema = Joi.object({
         'any.required': 'classId wajib diisi',
         'number.base': 'classId harus berupa angka',
     }),
+    academicYearId: Joi.number().integer().required().messages({
+        'any.required': 'academicYearId wajib diisi',
+        'number.base': 'academicYearId harus berupa angka',
+    }),
+    classStatus: Joi.string().valid("Active", "Promoted", "Transferred", "Graduated").optional()
 });
 
 const createSubjectClassSchema = Joi.object({
@@ -46,4 +56,24 @@ const createSubjectClassSchema = Joi.object({
     }),
 });
 
-module.exports = {createClassSchema, addStudentSchema, createSubjectClassSchema};
+const promoteStudentsSchema = Joi.object({
+    studentIds: Joi.array().items(Joi.number().required()).min(1).required().messages({
+        'array.min': 'Minimal satu studentId harus diberikan',
+        'any.required': 'studentIds wajib diisi'
+    }),
+    newClassId: Joi.number().required().messages({
+        'any.required': 'newClassId wajib diisi',
+        'number.base': 'newClassId harus berupa angka',
+    }),
+    academicYearId: Joi.number().required().messages({
+        'any.required': 'academicYearId wajib diisi',
+        'number.base': 'academicYearId harus berupa angka',
+    }),
+});
+
+module.exports = {
+    createClassSchema,
+    addStudentSchema,
+    createSubjectClassSchema,
+    promoteStudentsSchema,
+};

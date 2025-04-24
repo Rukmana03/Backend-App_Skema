@@ -1,62 +1,71 @@
 const assignmentRepository = require("../repositories/assignmentRepository");
-const subjectRepository = require("../repositories/subjectRepository");
+// const subjectRepository = require("../repositories/subjectRepository");
+const subjectClassRepository = require("../repositories/subjectClassRepository");
 const notificationService = require("../services/notificationService");
 const folderHelper = require("../utils/folderHelper");
-const { assignmentValidator, updateAssignment  } = require("../validations/assignmentValidator");
+const { assignmentValidator, updateAssignment } = require("../validations/assignmentValidator");
 const { throwError } = require("../utils/responseHandler");
 
 const assignmentService = {
     createAssignment: async (data) => {
-        // ✨ Validasi request
         const { error } = assignmentValidator.validate(data);
         if (error) throwError(400, error.details[0].message);
 
-        const { title, subjectClassId, teacherId } = data;
+        const { title, subjectClassId } = data;
 
-        // ✨ Cek duplikat assignment (title unik per subjectClass)
         const existingAssignment = await assignmentRepository.findAssignmentByTitleAndClass(title, subjectClassId);
-        if (existingAssignment) throwError(400, `Assignment "${title}" sudah ada.`);
+        if (existingAssignment) throwError(400, `Assignment "${title}" already available.`);
 
-        // ✨ Ambil subjectClass + relasinya
-        const subjectClass = await subjectRepository.getSubjectClassWithDetails(subjectClassId);
-        if (!subjectClass) throwError(404, "SubjectClass tidak ditemukan.");
-        if (!subjectClass.class) throwError(404, "Class tidak ditemukan.");
-        if (!subjectClass.subject) throwError(404, "Subject tidak ditemukan.");
+        const subjectClasses = await subjectClassRepository.findBySubjectAndClass(subjectClassId);
+        if (!subjectClasses) throwError(404, "SubjectClass not found");
+        if (!subjectClasses.class) throwError(404, "Class not found");
+        if (!subjectClasses.subject) throwError(404, "Subject not found");
+        if (!subjectClasses.teacher) throwError(404, "Teacher not found")
 
-        const { schoolId } = subjectClass.class;
-        const subjectId = subjectClass.subject.id;
+        const schoolId = subjectClasses.class.schoolId;
+        const subjectId = subjectClasses.subjectId;
 
-        // ✨ Simpan assignment baru
-        const assignment = await assignmentRepository.createAssignment({
-            ...data
-        });
+        const assignment = await assignmentRepository.createAssignment({ ...data });
 
-        // ✨ Buat folder assignment
         folderHelper.createAssignmentFolder(
             schoolId,
-            subjectClass.class.id,
+            subjectClasses.classId,
             subjectId,
             assignment.id
         );
 
-        // ✨ Kirim notifikasi ke student aktif
-        const activeStudents = subjectClass.class.studentClasses?.filter(sc => sc.status === "Active") || [];
+        const activeStudents = subjectClasses.class.studentClasses || [];
         if (activeStudents.length > 0) {
             await Promise.all(
-                activeStudents.map(student =>
-                    notificationService.sendNotification(
-                        student.studentId,
-                        `Tugas baru "${title}" telah ditambahkan.`
-                    )
-                )
+                activeStudents.map(async (sc) => {
+                    const studentId = sc.student?.id;
+                    if (studentId) {
+                        try {
+                            await notificationService.sendNotification({
+                                userId: studentId,
+                                message: `New assignment "${title}" has been added.`
+                            });
+                            console.log(`Notification successfully sent to student with ID: ${studentId}`);
+                        } catch (error) {
+                            console.error(`Failed to send notification to student with ID: ${studentId}`, error);
+                        }
+                    } else {
+                        console.warn("Invalid student ID:", sc);
+                        return Promise.resolve();
+                    }
+                })
             );
         }
-
         return assignment;
     },
 
     getAllAssignments: async () => {
         const assignments = await assignmentRepository.getAllAssignments();
+
+        if (!Array.isArray(assignments) || assignments.length === 0) {
+            throwError(404, "Assignment not found");
+        }
+
         return assignments.map(assignment => ({
             id: assignment.id,
             title: assignment.title,
@@ -85,15 +94,12 @@ const assignmentService = {
     },
 
     updateAssignment: async (id, data) => {
-        // Validasi input update assignment
         const { error } = updateAssignment.validate(data);
         if (error) throwError(400, error.details[0].message);
 
-        // Pastikan assignment ada
         const existingAssignment = await assignmentRepository.getAssignmentById(id);
-        if (!existingAssignment) throwError(404, "Assignment tidak ditemukan.");
+        if (!existingAssignment) throwError(404, "Assignment not found");
 
-        // Update assignment
         return await assignmentRepository.updateAssignment(id, data);
     },
 

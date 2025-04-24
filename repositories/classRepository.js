@@ -12,6 +12,7 @@ const classRepository = {
             select: {
                 id: true,
                 schoolId: true,
+                academicYearId: true,
                 className: true,
                 status: true,
             }
@@ -39,27 +40,6 @@ const classRepository = {
         });
     },
 
-    addStudentToClass: async (classId, studentId) => {
-        return await prisma.studentClass.create({
-            data: {
-                classId: Number(classId),
-                studentId: Number(studentId),
-                status: "Active"
-            },
-        });
-    },
-
-    deactivateStudentInClass: async (classId, studentId) => {
-        return await prisma.studentClass.updateMany({
-            where: {
-                classId: Number(classId),
-                studentId: Number(studentId),
-                status: "Active",
-            },
-            data: { status: "Inactive" },
-        });
-    },
-
     getClassDetails: async (classId) => {
         return await prisma.class.findUnique({
             where: { id: Number(classId) },
@@ -81,30 +61,6 @@ const classRepository = {
                         }
                     },
                 },
-            },
-        });
-    },
-
-    moveStudent: async (studentClassId, newClassId) => {
-        return await prisma.studentClass.update({
-            where: { id: Number(studentClassId) },
-            data: { classId: Number(newClassId) },
-        });
-    },
-
-    getActiveStudentClass: async (classId) => {
-        return await prisma.studentClass.findMany({
-            where: { classId: Number(classId), status: "Active" },
-            include: { Student: true }
-        });
-    },
-
-    findStudentInClass: async (studentId, classId) => {
-        return await prisma.studentClass.findFirst({
-            where: {
-                studentId,
-                classId,
-                status: "Active",
             },
         });
     },

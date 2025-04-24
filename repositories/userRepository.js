@@ -30,7 +30,13 @@ const userRepository = {
         role: true,
         createdAt: true,
       },
-      orderBy: { createdAt: "desc" },
+    });
+  },
+
+  clearRefreshToken: async (userId) => {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
     });
   },
 
@@ -47,6 +53,7 @@ const userRepository = {
         id: true,
         username: true,
         email: true,
+        password: true,
         role: true,
         refreshToken: true,
       },
@@ -64,6 +71,21 @@ const userRepository = {
       },
     });
   },
+
+  incrementRefreshAttempts: async (userId) => {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { refreshAttempts: { increment: 1 } },
+    });
+  },
+
+  resetRefreshAttempts: async (userId) => {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { refreshAttempts: 0 },
+    });
+  },
+
 };
 
 module.exports = userRepository;

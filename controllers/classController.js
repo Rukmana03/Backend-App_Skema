@@ -51,54 +51,11 @@ const classController = {
     }
   },
 
-  addStudentToClass: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { studentId } = req.body;
-
-      await classService.addStudentToClass({ classId: Number(id), studentId: Number(studentId) });
-
-      return successResponse(res, 200, "Student berhasil ditambahkan ke kelas");
-    } catch (error) {
-      return errorResponse(res, error.status || 400, error.message);
-    }
-  },
-
-  deactivateStudentInClass: async (req, res) => {
-    try {
-      const { classId, studentId } = req.params;
-      const result = await classService.deactivateStudentInClass(classId, studentId);
-      return successResponse(res, 200, "Student berhasil dinonaktifkan", result);
-    } catch (error) {
-      return errorResponse(res, error.status || 400, error.message);
-    }
-  },
-
   getClassMembers: async (req, res) => {
     try {
       const { id } = req.params;
       const classDetails = await classService.getClassWithMembers(id);
       return successResponse(res, 200, "Data berhasil ditemukan", classDetails);
-    } catch (error) {
-      return errorResponse(res, error.status || 500, error.message);
-    }
-  },
-
-  moveStudentToClass: async (req, res) => {
-    try {
-      const { studentId, newClassId } = req.body;
-      const result = await classService.moveStudent(studentId, newClassId);
-      return successResponse(res, 200, result.message);
-    } catch (error) {
-      return errorResponse(res, error.status || 500, error.message);
-    }
-  },
-
-  getActiveStudentsInClass: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const students = await classService.getActiveStudentsInClass(Number(id));
-      return successResponse(res, 200, "Data berhasil ditemukan", students);
     } catch (error) {
       return errorResponse(res, error.status || 500, error.message);
     }
