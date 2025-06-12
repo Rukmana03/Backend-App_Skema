@@ -5,12 +5,12 @@ const submissionController = {
     createSubmission: async (req, res) => {
         try {
             const { assignmentId } = req.body;
-            const studentId = req.user.id;
             const files = req.files;
+            const currentUser = req.user;
+            
+            const submission = await submissionService.createSubmission(assignmentId, currentUser, files);
 
-            const submission = await submissionService.createSubmission({ assignmentId, studentId, files });
-
-            return successResponse(res, 201, "Submission berhasil dibuat", submission);
+            return successResponse(res, 201, "Submission successfully made", submission);
         } catch (error) {
             return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
@@ -20,7 +20,7 @@ const submissionController = {
         try {
             const id = Number(req.params.id);
             const submission = await submissionService.getSubmissionById(id);
-            return successResponse(res, 200, "Detail submission berhasil diambil", submission);
+            return successResponse(res, 200, "Submission details were successfully taken", submission);
         } catch (error) {
             return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
@@ -39,7 +39,7 @@ const submissionController = {
         try {
             const id = Number(req.params.id);
             const updated = await submissionService.updateSubmission(id, req.body);
-            return successResponse(res, 200, "Submission berhasil diperbarui", updated);
+            return successResponse(res, 200, "Submission was successfully updated", updated);
         } catch (error) {
             return errorResponse(res, error.status || 400, error.message || "Internal server error");
         }
@@ -52,24 +52,12 @@ const submissionController = {
 
             const result = await submissionService.deleteSubmission({ submissionId, userId, userRole });
 
-            return successResponse(res, 200, "Submission berhasil dihapus", result);
+            return successResponse(res, 200, "Submission successfully deleted", result);
         } catch (error) {
             return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
     },
 
-    submitSubmission: async (req, res) => {
-        try {
-            const studentId = req.user.id;
-            const assignmentId = Number(req.params.id);
-
-            const submission = await submissionService.submitSubmission({ assignmentId, studentId });
-
-            return successResponse(res, 201, "Submission berhasil dikirim", submission);
-        } catch (error) {
-            return errorResponse(res, error.status || 500, error.message || "Internal server error");
-        }
-    },
 };
 
 module.exports = submissionController;

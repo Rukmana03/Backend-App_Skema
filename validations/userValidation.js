@@ -2,26 +2,26 @@ const Joi = require("joi");
 
 const createUserSchema = Joi.object({
     username: Joi.string().max(50).required().messages({
-        "string.empty": "Username tidak boleh kosong.",
-        "string.min": "Username minimal 3 karakter.",
-        "string.max": "Username maksimal 50 karakter.",
-        "any.required": "Username wajib diisi."
+        "string.empty": "Username cannot be empty.",
+        "string.min": "usernameMinimal3Character",
+        "string.max": "Username a maximum of 50 characters.",
+        "any.required": "Username must be filled in."
     }),
     email: Joi.string().email().required().messages({
-        "string.email": "Format email tidak valid.",
-        "string.empty": "Email tidak boleh kosong.",
-        "any.required": "Email wajib diisi."
+        "string.email": "Invalid email format.",
+        "string.empty": "Email can't be empty.",
+        "any.required": "Email must be filled in."
     }),
     password: Joi.string().min(8).max(100).pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[^\\s]+$")).required().messages({
-        "string.pattern.base": "Password harus mengandung huruf besar, huruf kecil, angka, dan tidak boleh mengandung spasi.",
-        "string.min": "Password minimal 8 karakter.",
-        "string.max": "Password maksimal 100 karakter.",
-        "string.empty": "Password tidak boleh kosong.",
-        "any.required": "Password wajib diisi.",
+        "string.pattern.base": "Passwords must contain uppercase letters, lowercase letters, numbers, and may not contain spaces.",
+        "string.min": "A minimum password of 8 characters.",
+        "string.max": "A maximum password of 100 characters.",
+        "string.empty": "The password cannot be empty.",
+        "any.required": "Password must be filled in.",
     }),
     role: Joi.string().valid("Admin", "Teacher", "Student").required().messages({
-        "any.only": "Role hanya bisa 'Admin', 'Teacher', atau 'Student'.",
-        "any.required": "Role wajib diisi."
+        "any.only": "Role can only be 'admin', 'Teacher', or 'Student'.",
+        "any.required": "Role must be filled in."
     }),
 
     // Profile

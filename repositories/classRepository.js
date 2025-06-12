@@ -11,8 +11,18 @@ const classRepository = {
             where: { deletedAt: null },
             select: {
                 id: true,
-                schoolId: true,
-                academicYearId: true,
+                school: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+                academicYear: {
+                    select: {
+                        id: true,
+                        year: true,
+                    },
+                },
                 className: true,
                 status: true,
             }
@@ -46,7 +56,7 @@ const classRepository = {
             include: {
                 studentClasses: {
                     include: {
-                        Student: {
+                        student: {
                             select: { id: true, username: true, email: true },
                         }
                     },
@@ -61,17 +71,6 @@ const classRepository = {
                         }
                     },
                 },
-            },
-        });
-    },
-
-    getSubjectClassById: async (id) => {
-        return await prisma.subjectClass.findUnique({
-            where: { id },
-            select: {
-                id: true,
-                classId: true,
-                teacherId: true,
             },
         });
     },
@@ -94,6 +93,27 @@ const classRepository = {
             }
         });
     },
+
+    getSubjectClassById: async (id) => {
+        return await prisma.subjectClass.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                classId: true,
+                teacherId: true,
+            },
+        });
+    },
+
+    findStudentInClass: async (studentId, classId) => {
+        return await prisma.studentClass.findFirst({
+            where: {
+                studentId,
+                classId,
+            },
+        });
+    },
 };
 
 module.exports = classRepository;
+

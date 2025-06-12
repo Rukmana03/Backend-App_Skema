@@ -6,7 +6,7 @@ const testCases = [
         data: {
             username: "john_doe",
             email: "john@example.com",
-            password: "Secure123", // ✅ huruf besar, kecil, angka, tanpa spasi
+            password: "Secure123", 
             role: "Student",
             name: "John Doe",
             identityNumber: "1234567890",
@@ -15,7 +15,7 @@ const testCases = [
         },
     },
     {
-        name: "❌ Kosong semua field wajib",
+        name: "❌ Empty all compulsory fields",
         data: {
             username: "",
             email: "",
@@ -24,20 +24,20 @@ const testCases = [
         },
     },
     {
-        name: "❌ Format email salah, password terlalu pendek, role tidak valid",
+        name: "❌ The email format is wrong, the password is too short, the role is invalid",
         data: {
             username: "john",
-            email: "salah-email",
+            email: "wrong-email",
             password: "123",
-            role: "Guru", // ❌ bukan 'Admin', 'Teacher', 'Student'
+            role: "Guru", // ❌
         },
     },
     {
-        name: "❌ Password ada spasi",
+        name: "❌ Password has a space",
         data: {
             username: "jane_doe",
             email: "jane@example.com",
-            password: "Secure 123", // ❌ spasi
+            password: "Secure 123", // ❌ 
             role: "Teacher",
         },
     },

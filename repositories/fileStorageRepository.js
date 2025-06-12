@@ -8,28 +8,17 @@ const fileStorageRepository = {
         });
     },
 
-    linkFileToAssignment: async (fileId, assignmentId) => {
-        return await prisma.assignmentFile.create({
-            data: { fileId, assignmentId }
-        });
-    },
-
-    linkFileToSubmission: async (fileId, submissionId) => {
-        return await prisma.submissionFile.create({
-            data: { fileId, submissionId }
-        });
-    },
-
-    getFileByAssignment: async (fileId, assignmentId) => {
-        return await prisma.assignmentFile.findFirst({
-            where: { fileId, assignmentId }
-        });
-    },
-
-    getFilesBySubmission: async (submissionId) => {
-        return await prisma.submissionFile.findMany({
-            where: { submissionId },
-            include: { file: true }
+    createManyFiles: async (files) => {
+        return await prisma.fileStorage.createMany({
+            data: files.map((file) => ({
+                userId: file.userId,
+                fileName: file.fileName,
+                fileUrl: file.fileUrl,
+                fileType: file.fileType,
+                submissionId: file.submissionId,
+                assignmentId: file.assignmentId,
+                uploadDate: file.uploadDate,
+            })),
         });
     },
 
@@ -43,9 +32,21 @@ const fileStorageRepository = {
         return prisma.fileStorage.findUnique({
             where: { id: fileId },
             include: {
-                AssignmentFile: true,
-                SubmissionFile: true,
+                assignment: true,
+                submission: true,
             },
+        });
+    },
+
+    getFilesByAssignment: async (assignmentId) => {
+        return prisma.fileStorage.findMany({
+            where: { assignmentId },
+        });
+    },
+
+    getFilesBySubmission: async (submissionId) => {
+        return prisma.fileStorage.findMany({
+            where: { submissionId },
         });
     },
 };

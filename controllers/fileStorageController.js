@@ -1,32 +1,18 @@
+const fileStorageRepository = require("../repositories/fileStorageRepository");
 const fileStorageService = require("../services/fileStorageService");
+const { successResponse, errorResponse } = require("../utils/responseHandler");
 
 const fileStorageController = {
     addFileToAssignment: async (req, res) => {
         try {
-            const userId = req.user.id;
+            const { assignmentId } = req.body;
+            const currentUser = req.user;
             const files = req.files;
-            const payload = {
-                userId,
-                assignmentId: req.params.assignmentId || req.body.assignmentId,
-                schoolId: req.body.schoolId,
-                classId: req.body.classId,
-                subjectId: req.body.subjectId,
-                files,
-            };
-
-            const savedFiles = await fileStorageService.addFilesToAssignment(payload);
-
-            return res.status(201).json({
-                success: true,
-                message: "File berhasil diunggah",
-                data: savedFiles,
-            });
+            const savedFiles = await fileStorageService.addFilesToAssignment(assignmentId, currentUser, files);
+            return successResponse(res, 200, "The file was successfully uploaded", savedFiles);
         } catch (error) {
-            console.error("[ERROR] Gagal upload file ke Assignment:", error);
-            return res.status(error.statusCode || 500).json({
-                success: false,
-                message: error.message || "Terjadi kesalahan",
-            });
+            console.log("Error");
+            return errorResponse(res, error.status || 500, error.message || "Internal Server Error");
         }
     },
 
@@ -34,14 +20,9 @@ const fileStorageController = {
         try {
             const { assignmentId } = req.params;
             const files = await fileStorageService.getFilesByAssignment(Number(assignmentId));
-            if (!files.length) {
-                return res.status(404).json({ success: false, message: "Tidak ada file dalam assignment ini." });
-            }
-
-            return res.status(200).json({ success: true, message: "File ditemukan", data: files });
+            return successResponse(res, 200, "Files retrieved successfully", files);
         } catch (error) {
-            console.error("Error getFilesByAssignment:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Internal Server Error");
         }
     },
 
@@ -49,14 +30,9 @@ const fileStorageController = {
         try {
             const { submissionId } = req.params;
             const files = await fileStorageService.getFilesBySubmission(Number(submissionId));
-            if (!files.length) {
-                return res.status(404).json({ success: false, message: "Tidak ada file dalam submission ini." });
-            }
-
-            return res.status(200).json({ success: true, message: "File ditemukan", data: files });
+            return successResponse(res, 200, "Files retrieved successfully", files);
         } catch (error) {
-            console.error("Error getFilesBySubmission:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Internal Server Error");
         }
     },
 
@@ -64,21 +40,20 @@ const fileStorageController = {
         try {
             const { fileId } = req.params;
             await fileStorageService.deleteFile(Number(fileId));
-
-            return res.status(200).json({ success: true, message: "File berhasil dihapus" });
+            return successResponse(res, 200, "File deleted successfully");
         } catch (error) {
-            console.error("Error deleteFile:", error);
-            return res.status(500).json({ success: false, message: "Terjadi kesalahan", error: error.message });
+            return errorResponse(res, error.status || 500, error.message || "Internal Server Error");
         }
     },
 
-    downloadFile: async (req, res, next) => {
+    downloadFile: async (req, res) => {
         try {
             const { fileId } = req.params;
-            const result = await fileStorageService.downloadFile(fileId, req.user);
-            res.download(result.filePath, result.fileName);
-        } catch (err) {
-            next(err);
+            const user = req.user;
+            const {fileName, filePath} = await fileStorageService.downloadFile(Number(fileId), user);
+            res.download(filePath, fileName);
+        } catch (error) {
+            return errorResponse(res, error.status || 500, error.message || "Failed to download file");
         }
     },
 };

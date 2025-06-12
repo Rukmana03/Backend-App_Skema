@@ -1,79 +1,78 @@
 const submissionRepository = require("../repositories/submissionRepository");
+const fileStorageRepository = require("../repositories/fileStorageRepository");
 const assignmentRepository = require("../repositories/assignmentRepository");
 const notificationService = require("../services/notificationService");
 const folderHelper = require("../utils/folderHelper");
-const fileStorageRepository = require("../repositories/fileStorageRepository");
+const { addManyFilesSchema } = require("../validations/fileStorageValidation");
 const path = require("path");
 const fs = require("fs");
 const { throwError } = require("../utils/responseHandler");
 
+
 const submissionService = {
-    createSubmission: async ({ assignmentId,  files }, currentUser) => {
-        assignmentId = Number(assignmentId);
-        const studentId = Number(currentUser?.id);
+    createSubmission: async (assignmentIdRaw, currentUser, files) => {
+        const assignmentId = Number(assignmentIdRaw);
+        const studentId = Number(currentUser.id);
 
         if (!assignmentId || !studentId) {
-            throwError(400, "assignmentId wajib diisi dan user harus login.");
+            throwError(400, "AssignmentId must be filled in and the user must log in.");
         }
-        console.log("[DEBUG] Membuat submission untuk assignment:", assignmentId, "oleh student:", studentId);
 
         const assignment = await assignmentRepository.getAssignmentById(assignmentId);
         if (!assignment) throwError(404, "Assignment not found");
 
         const subjectClass = await submissionRepository.getSubjectClassByAssignmentId(assignmentId);
-        if (!subjectClass || !subjectClass.class) throwError(404, "Class atau Subject tidak ditemukan.");
-
-        const schoolId = subjectClass.class.schoolId;
-        const classId = subjectClass.class.id;
-        const subjectId = subjectClass.subjectId;
+        if (!subjectClass || !subjectClass.class) throwError(404, "Class or subject not found.");
 
         const submission = await submissionRepository.createSubmission({
             assignmentId,
             studentId,
         });
+        const submissionId = submission.id;
+
+        const schoolId = subjectClass.class.schoolId;
+        const classId = subjectClass.class.id;
+        const subjectId = subjectClass.subjectId;
 
         const submissionFolderPath = folderHelper.createSubmissionFolder(
-            schoolId, classId, subjectId, assignmentId, submissionId
+            schoolId, classId, subjectId, submissionId
         );
-        console.log("[INFO] Folder penyimpanan submission:", submissionFolderPath);
 
-        if (!files || files.length === 0) {
-            throwError(400, "Tidak ada file yang diunggah.");
-        }
-
-        const uploadedFiles = await Promise.all(
-            files.map(async (file) => {
-                const finalFilePath = path.join(submissionFolderPath, file.filename);
-                try {
-                    fs.renameSync(file.path, finalFilePath);
-                } catch (err) {
-                    console.error("[ERROR] Gagal memindahkan file:", err);
-                    throwError(500, "Gagal menyimpan file.");
-                }
-
-                const fileUrl = `/${finalFilePath.replace(/\\/g, "/")}`;
-                const fileData = {
+        if (files && files.length > 0) {
+            const fileStorages = files.map((file) => {
+                const filePrefix = 'submission_';
+                return {
                     userId: studentId,
                     fileName: file.originalname,
-                    fileUrl: fileUrl,
+                    fileUrl: `${submissionFolderPath}/${filePrefix}${file.filename}`,
+                    fileType: "Submission",
+                    submissionId: submissionId,
+                    assignmentId: assignmentId,
+                    uploadDate: new Date(),
                 };
+            });
+            const { error } = addManyFilesSchema.validate(fileStorages);
+            if (error) {
+                console.error("Validation error:", error.details);
+                throwError(400, error.details[0].message);
+                return
+            }
+            await fileStorageRepository.createManyFiles(fileStorages);
+        }
 
-                console.log(`[INFO] Menyimpan file: ${finalFilePath} ke database.`);
-                const savedFile = await fileStorageRepository.createFile(fileData);
-                await fileStorageRepository.linkFileToSubmission(savedFile.id, submissionId);
+        const teacherId = assignment.subjectClass.teacher?.id || null;
+        console.log(teacherId);
+        if (teacherId) {
+            const notificationData = {
+                userId: teacherId,
+                message: `Students send assignments to"${assignment.title}".`
+            };
+            await notificationService.sendNotification(notificationData);
+        } else {
+            console.log("[INFO] Teacher ID is not found, notifications are not sent.");
+        }
 
-                return savedFile;
-            })
-        );
-
-        console.log("[DEBUG] Semua file berhasil disimpan.");
-
-        await notificationService.sendNotification(
-            assignment.teacherId,
-            `Siswa mengirim tugas untuk "${assignment.title}".`
-        );
-
-        return { submission, files: uploadedFiles };
+        return submission;
     },
 
     getAllSubmissions: async () => {
@@ -83,7 +82,7 @@ const submissionService = {
 
     getSubmissionById: async (id) => {
         const submissions = await submissionRepository.getSubmissionById(Number(id));
-        if (!submissions) throwError(404, "Submission tidak ditemukan");
+        if (!submissions) throwError(404, "Submission is not found");
         return {
             message: "Submission retrieved successfully",
             data: submissions
@@ -94,80 +93,41 @@ const submissionService = {
         const existingSubmission = await submissionRepository.getSubmissionById(id);
         if (!existingSubmission) throwError(404, "Submission not found");
 
-        if (!existingSubmission.assignment) throwError(404, "Assignment terkait tidak ditemukan");
+        if (!existingSubmission.assignment) throwError(404, "Related assignment is not found ");
 
         const deadline = new Date(existingSubmission.assignment.deadline);
         const now = new Date();
-        if (now > deadline) throwError(400, "Tidak bisa mengupdate, deadline sudah lewat");
+        if (now > deadline) throwError(400, "Cannot update, the deadline has passed");
 
         return await submissionRepository.updateSubmission(id, data);
     },
 
-    getAssignmentById: async (assignmentId) => {
-        return await assignmentRepository.getAssignmentById(assignmentId);
-    },
-
     deleteSubmission: async ({ submissionId, userId, userRole }) => {
-        console.log("[DEBUG] Service: Menghapus submission");
-        console.log("[DEBUG] Submission ID:", submissionId);
-        console.log("[DEBUG] User ID:", userId);
-        console.log("[DEBUG] Role User:", userRole);
-
         const submission = await submissionRepository.getSubmissionById(submissionId);
-        if (!submission) throwError(404, "Submission tidak ditemukan");
+        if (!submission) throwError(404, "Submission not found");
 
         const assignmentDeadline = new Date(submission.assignment.deadline);
         const now = new Date();
         const isDeadlinePassed = now > assignmentDeadline;
 
         if (isDeadlinePassed && userRole !== "Admin") {
-            throwError(403, "Hanya Admin yang bisa menghapus submission setelah deadline");
+            throwError(403, "Only admin can delete submissions after deadlines");
         }
         if (!isDeadlinePassed && userRole !== "Admin" && userRole !== "Teacher") {
-            throwError(403, "Hanya Admin atau Teacher yang bisa menghapus submission sebelum deadline");
+            throwError(403, "Only admin or teacher can delete submissions before the deadline");
         }
 
         if (submission.fileUrl) {
             const filePath = path.join(__dirname, "..", submission.fileUrl);
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
-                console.log("[INFO] File submission dihapus:", filePath);
+                console.log("[INFO] The submission file is deleted:", filePath);
             }
         }
 
         await submissionRepository.deleteSubmission(submissionId);
-        console.log("[INFO] Submission berhasil dihapus.");
 
-        return { message: "Submission berhasil dihapus" };
-    },
-
-    submitSubmission: async ({ assignmentId, studentId }) => {
-        console.log("[DEBUG] Mulai proses submission...", { assignmentId, studentId });
-
-        assignmentId = Number(assignmentId);
-        if (isNaN(assignmentId)) throwError(400, "assignmentId harus berupa angka yang valid.");
-
-        const existingSubmission = await submissionRepository.findSubmissionByStudent(assignmentId, studentId);
-        if (!existingSubmission) throwError(404, "Submission belum dibuat. Harap buat submission terlebih dahulu sebelum mengirim.");
-
-        if (!existingSubmission.fileUrl) throwError(400, "Submission harus memiliki file sebelum bisa dikirim.");
-
-        const assignment = await assignmentRepository.getAssignmentById(assignmentId);
-        if (!assignment) throwError(404, "Assignment not found");
-
-        if (!assignment.deadline) throwError(400, "Assignment belum memiliki deadline.");
-
-        const now = new Date();
-        const deadlineDate = new Date(assignment.deadline);
-
-        if (isNaN(deadlineDate.getTime())) throwError(400, "Format deadline tidak valid.");
-
-        if (deadlineDate < now) throwError(400, "Deadline sudah lewat, tidak bisa submit.");
-
-        const submission = await submissionRepository.updateSubmissionStatus(existingSubmission.id, "Submitted");
-
-        console.log("[DEBUG] Submission berhasil dikirim:", submission);
-        return submission;
+        return;
     },
 
 };

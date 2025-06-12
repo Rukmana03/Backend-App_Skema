@@ -2,25 +2,25 @@ const Joi = require("joi");
 
 const createSubjectClassSchema = Joi.object({
     subjectId: Joi.number().integer().required().messages({
-        'any.required': 'subjectId wajib diisi',
-        'number.base': 'subjectId harus berupa angka',
+        'any.required': 'subjectId must be filled in',
+        'number.base': 'subjectId must be a number',
     }),
     classId: Joi.number().integer().required().messages({
-        'any.required': 'classId wajib diisi',
-        'number.base': 'classId harus berupa angka',
+        'any.required': 'classId must be filled in',
+        'number.base': 'classId must be a number',
     }),
     teacherId: Joi.number().integer().required().messages({
-        'any.required': 'teacherId wajib diisi',
-        'number.base': 'teacherId harus berupa angka',
+        'any.required': 'teacherId must be filled in',
+        'number.base': 'teacherId must be a number',
     }),
     academicYearId: Joi.number().integer().required().messages({
-        'any.required': 'academicYearId wajib diisi',
-        'number.base': 'academicYearId harus berupa angka',
+        'any.required': 'academicYearId must be filled in',
+        'number.base': 'academicYearId must be a number',
     }),
     subjectClassCode: Joi.string().alphanum().min(3).max(50).optional().messages({
-        'string.alphanum': 'code hanya boleh huruf dan angka',
-        'string.min': 'code minimal 3 karakter',
-        'string.max': 'code maksimal 50 karakter',
+        'string.alphanum': 'Code can only be letters and numbers',
+        'string.min': 'Code minimal 3 grade',
+        'string.max': 'Code maximum 50 characters',
     }),
 });
 

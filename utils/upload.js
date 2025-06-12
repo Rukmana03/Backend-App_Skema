@@ -1,56 +1,35 @@
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
-const folderHelper = require("./folderHelper");
-const submissionRepository = require("../repositories/submissionRepository"); // atau path kamu
+const folderHelper = require("../utils/folderHelper");
+const assignmentRepository = require("../repositories/assignmentRepository");
+const submissionRepository = require("../repositories/submissionRepository");
 
 const storage = multer.diskStorage({
     destination: async (req, file, cb) => {
         try {
-            let uploadPath;
+            const { assignmentId } = req.body;
+            let uploadPath = folderHelper.getFileDataFolder();
 
-            if (req.path.includes("assignment")) {
-                const assignmentId = req.params.assignmentId;
-                if (!assignmentId) return cb(new Error("assignmentId harus disertakan."));
+            const isAssignment = file.fieldname === "assignmentFile"; 
 
-                // ✅ Ambil data terkait dari DB
-                const assignment = await submissionRepository.getAssignmentById(assignmentId);
-                if (!assignment || !assignment.subjectClass || !assignment.subjectClass.class) {
-                    return cb(new Error("Data assignment tidak lengkap."));
-                }
+            if (assignmentId) {
+                const assignment = await assignmentRepository.getAssignmentById(Number(assignmentId));
+                if (!assignment) return cb(new Error("Assignment not found"));
 
-                const schoolId = assignment.subjectClass.class.schoolId;
-                const classId = assignment.subjectClass.class.id;
-                const subjectId = assignment.subjectClass.subjectId;
+                const subjectClass = await submissionRepository.getSubjectClassByAssignmentId(Number(assignmentId));
+                if (!subjectClass || !subjectClass.class) return cb(new Error("Subject or Class not found"));
 
-                uploadPath = folderHelper.createAssignmentFolder(schoolId, classId, subjectId, assignmentId);
-            } else if (req.path.includes("submission")) {
-                const submissionId = req.params.submissionId;
-                if (!submissionId) return cb(new Error("submissionId harus disertakan."));
+                const schoolId = subjectClass.class.schoolId;
+                const classId = subjectClass.class.id;
+                const subjectId = subjectClass.subjectId;
 
-                // ✅ Ambil data submission dan assignment terkait
-                const submission = await submissionRepository.getSubmissionById(submissionId);
-                const assignment = await submissionRepository.getAssignmentById(submission.assignmentId);
-                if (!submission || !assignment || !assignment.subjectClass || !assignment.subjectClass.class) {
-                    return cb(new Error("Data submission tidak lengkap."));
-                }
-
-                const schoolId = assignment.subjectClass.class.schoolId;
-                const classId = assignment.subjectClass.class.id;
-                const subjectId = assignment.subjectClass.subjectId;
-                const assignmentId = assignment.id;
-
-                uploadPath = folderHelper.createSubmissionFolder(schoolId, classId, subjectId, assignmentId, submissionId);
-            } else {
-                return cb(new Error("Endpoint tidak valid untuk upload."));
+                uploadPath = isAssignment
+                    ? folderHelper.createAssignmentFolder(schoolId, classId, subjectId)
+                    : folderHelper.createSubmissionFolder(schoolId, classId, subjectId);
             }
 
-            // ✅ Buat folder kalau belum ada
-            if (!fs.existsSync(uploadPath)) {
-                fs.mkdirSync(uploadPath, { recursive: true });
-            }
-
-            console.log("[DEBUG] File akan disimpan di:", uploadPath);
+            folderHelper.createFolderIfNotExists(uploadPath);
+            console.log("[DEBUG] Files will be stored on:", uploadPath);
             cb(null, uploadPath);
         } catch (err) {
             cb(err);
@@ -58,21 +37,23 @@ const storage = multer.diskStorage({
     },
 
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        const prefix = req.body.assignmentId ? "submission_" : "assignment_";
+        const timestamp = Date.now();
+        const uniqueName = `${prefix}${timestamp}_${file.originalname}`;
+        cb(null, uniqueName); 
     }
 });
 
 const upload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 20 * 1024 * 1024 }, 
     fileFilter: (req, file, cb) => {
         const allowedTypes = [".pdf", ".doc", ".docx"];
         const ext = path.extname(file.originalname).toLowerCase();
         if (allowedTypes.includes(ext)) {
             cb(null, true);
         } else {
-            cb(new Error("Hanya file PDF, DOC, dan DOCX yang diperbolehkan"), false);
+            cb(new Error("Only PDF files, Doc, and Docx are allowed"), false);
         }
     }
 });

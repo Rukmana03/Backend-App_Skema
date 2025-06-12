@@ -1,3 +1,4 @@
+const classRepository = require("../repositories/classRepository");
 const studentClassService = require("../services/studentClassService");
 const { successResponse, errorResponse } = require("../utils/responseHandler");
 
@@ -50,8 +51,18 @@ const studentClassController = {
 
     promoteStudentsToClass: async (req, res) => {
         try {
-            const { studentIds, newClassId, academicYearId } = req.body;
-
+            const { studentIds, newClassId } = req.body;
+            if (!studentIds || studentIds.length === 0) {
+                return errorResponse(res, 400, "studentIds is required and cannot be empty");
+            }
+            if(!newClassId){
+                return errorResponse(res, 400, "newClassId is required for class promotion");
+            }
+            const newClass = await classRepository.getClassById(newClassId);
+            if (!newClass) {
+                return errorResponse(res, 404, "Destination class not found");
+            }
+            const academicYearId = newClass.academicYearId;
             if (!academicYearId) {
                 return errorResponse(res, 400, "academicYearId is required for class promotion");
             }

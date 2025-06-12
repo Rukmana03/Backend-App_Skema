@@ -15,7 +15,7 @@ const submissionRepository = {
 
     getSubjectClassByAssignmentId: async (assignmentId) => {
         return prisma.subjectClass.findFirst({
-            where: { assignments: { some: { id: assignmentId } } },
+            where: { assignments: { some: { id: Number(assignmentId) } } },
             include: { class: { select: { id: true, schoolId: true } } },
         });
     },
@@ -45,13 +45,9 @@ const submissionRepository = {
                 },
                 files: {
                     select: {
-                        file: {
-                            select: {
-                                id: true,
-                                fileName: true,
-                                fileUrl: true
-                            }
-                        }
+                        id: true,
+                        fileName: true,
+                        fileUrl: true
                     }
                 }
             }

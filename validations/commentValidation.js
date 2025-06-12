@@ -1,9 +1,10 @@
 const Joi = require("joi");
 
 const createCommentSchema = Joi.object({
-    assignmentId: Joi.number().optional(),
-    submissionId: Joi.number().optional(),
-    text: Joi.string().min(1).required(),
-}).or('assignmentId', 'submissionId');      
+    text: Joi.string().required(),
+  assignmentId: Joi.number().optional().allow(null),
+  submissionId: Joi.number().optional().allow(null),
+}).or('assignmentId', 'submissionId');
+
 
 module.exports = { createCommentSchema };

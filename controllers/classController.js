@@ -15,7 +15,7 @@ const classController = {
   getAllClasses: async (req, res) => {
     try {
       const classes = await classService.getAllClasses();
-      return successResponse(res, 200, "Data berhasil ditemukan", classes);
+      return successResponse(res, 200, "Data was found", classes);
     } catch (error) {
       return errorResponse(res, error.status || 500, error.message);
     }
@@ -25,7 +25,7 @@ const classController = {
     try {
       const { id } = req.params;
       const classData = await classService.getClassById(Number(id));
-      return successResponse(res, 200, "Data berhasil ditemukan", classData);
+      return successResponse(res, 200, "Data was found", classData);
     } catch (error) {
       return errorResponse(res, error.status || 400, error.message);
     }
@@ -55,7 +55,7 @@ const classController = {
     try {
       const { id } = req.params;
       const classDetails = await classService.getClassWithMembers(id);
-      return successResponse(res, 200, "Data berhasil ditemukan", classDetails);
+      return successResponse(res, 200, "Data was found", classDetails);
     } catch (error) {
       return errorResponse(res, error.status || 500, error.message);
     }
@@ -65,7 +65,7 @@ const classController = {
     try {
       const { id } = req.params;
       const subjects = await classService.getSubjectsByClassId(id);
-      return successResponse(res, 200, "Data berhasil ditemukan", subjects);
+      return successResponse(res, 200, "Data was found", subjects);
     } catch (error) {
       return errorResponse(res, error.status || 500, error.message);
     }

@@ -11,7 +11,7 @@ const classService = {
     const { schoolId, className, academicYearId } = data;
 
     const existingClass = await classRepository.findClassByNameAndSchool(schoolId, className);
-    if (existingClass) throwError(400, "Nama kelas sudah digunakan dalam sekolah ini. Gunakan nama lain.");
+    if (existingClass) throwError(400, "Class names have been used in this school.Use another name.");
 
     const newClass = await classRepository.createClass({
       schoolId,
@@ -35,10 +35,10 @@ const classService = {
   },
 
   getSubjectsByClassId: async (classId) => {
-    if (!classId) throwError(400, "classId wajib diisi");
+    if (!classId) throwError(400, "ClassId must be filled in");
 
     const subjects = await classRepository.getSubjectsByClassId(classId);
-    if (!subjects.length) throwError(404, "Tidak ada subject dalam kelas ini.");
+    if (!subjects.length) throwError(404, "There is no subject in this class.");
 
     return subjects.map((subjectClass) => ({
       id: subjectClass.subject.id,
@@ -54,7 +54,7 @@ const classService = {
   },
 
   getClassWithMembers: async (classId) => {
-    if (!classId) throwError(400, "classId wajib diisi");
+    if (!classId) throwError(400, "ClassId must be filled in");
 
     const classData = await classRepository.getClassDetails(classId);
     if (!classData) throwError(404, "Class not found");
@@ -63,13 +63,12 @@ const classService = {
       id: classData.id,
       className: classData.className,
       status: classData.status,
-      students: classData.studentClasses.map((sc) => ({
-        id: sc.Student.id,
-        username: sc.Student.username,
-        email: sc.Student.email,
-        status: sc.status,
+      students: (classData.studentClasses || []).map((sc) => ({
+        id: sc.student.id,
+        username: sc.student.username,
+        email: sc.student.email,
       })),
-      subjects: classData.subjectClasses.map((sc) => ({
+      subjects: (classData.subjectClasses || []).map((sc) => ({
         id: sc.subject.id,
         subjectName: sc.subject.subjectName,
         description: sc.subject.description,
@@ -89,7 +88,7 @@ const classService = {
   },
 
   getClassById: async (id) => {
-    if (!id) throwError(400, "id wajib diisi");
+    if (!id) throwError(400, "ID must be filled in");
 
     const classData = await classRepository.getClassById(id);
     if (!classData || classData.deletedAt) throwError(404, "Class not found");

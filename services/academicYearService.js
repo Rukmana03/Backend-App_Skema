@@ -7,7 +7,6 @@ const academicYearService = {
         const { value, error } = createAcademicYearSchema.validate(payload);
         if (error) throwError(400, error.details[0].message);
 
-        // Jika isActive true, nonaktifkan yang lain
         if (value.isActive) {
             await academicYearRepository.deactivateAllYears();
         }
@@ -27,13 +26,13 @@ const academicYearService = {
 
     getActiveAcademicYear: async () => {
         const active = await academicYearRepository.getActiveAcademicYear();
-        if (!active) throwError(404, "Tidak ada tahun ajaran yang aktif.");
+        if (!active) throwError(404, "There is no active school year");
         return active;
     },
 
     getInActiveAcademicYear: async () => {
         const inactive = await academicYearRepository.getInActiveAcademicYear();
-        if (!inactive) throwError(404, "Tidak ada tahun ajaran yang tidak aktif.");
+        if (!inactive) throwError(404, "There is no inactive school year.");
         return inactive;
     },
 
@@ -42,7 +41,7 @@ const academicYearService = {
         if (isNaN(parsedId)) throwError(400, "ID tidak valid.");
 
         const existing = await academicYearRepository.getAcademicYearById(parsedId);
-        if (!existing) throwError(404, "Tahun ajaran tidak ditemukan.");
+        if (!existing) throwError(404, "The school year was not found.");
 
         const { value, error } = updateAcademicYearSchema.validate(payload);
         if (error) throwError(400, error.details[0].message);
@@ -56,10 +55,10 @@ const academicYearService = {
 
     deleteAcademicYear: async (id) => {
         const parsedId = Number(id);
-        if (isNaN(parsedId)) throwError(400, "ID tidak valid.");
+        if (isNaN(parsedId)) throwError(400, "Invalid ID.");
 
         const existing = await academicYearRepository.getAcademicYearById(parsedId);
-        if (!existing) throwError(404, "Tahun ajaran tidak ditemukan.");
+        if (!existing) throwError(404, "The school year was not found.");
 
         return await academicYearRepository.deleteAcademicYear(parsedId);
     },

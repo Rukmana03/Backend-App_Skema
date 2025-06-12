@@ -64,10 +64,8 @@ const schoolService = {
         if (!schools || schools.length === 0) {
             throwError(404, "School not found");
         }
-
         return schools;
     },
-
 
     getSchoolById: async (id) => {
         const schoolId = Number(id);

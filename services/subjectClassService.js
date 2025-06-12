@@ -1,7 +1,9 @@
 const subjectClassRepository = require("../repositories/subjectClassRepository");
+const userRepository = require("../repositories/userRepository");
 const { createSubjectClassSchema } = require("../validations/subjectClassValidation");
 const { throwError } = require("../utils/responseHandler");
 const slugify = require("../utils/slugify");
+const folderHelper = require("../utils/folderHelper");
 
 const subjectClassService = {
     createSubjectClass: async (data) => {
@@ -16,8 +18,8 @@ const subjectClassService = {
             throwError(400, "Subject is already connected to this class");
         }
 
-        const subjectName = await subjectClassRepository.findSubjectById(value.subjectId);
-        if (!subjectName) {
+        const subject = await subjectClassRepository.findSubjectById(value.subjectId);
+        if (!subject) {
             throwError(404, "Subject not found");
         }
 
@@ -26,11 +28,11 @@ const subjectClassService = {
             throwError(404, "Class not found");
         }
 
-        if (!subjectName.subjectName || !classData.className) {
+        if (!subject.subjectName || !classData.className) {
             throwError(500, "Failed to generate code because subject/class has no name");
         }
 
-        const subjectClassCode = `${slugify(subjectName.subjectName)}-${slugify(classData.className)}`;
+        const subjectClassCode = `${slugify(subject.subjectName)}-${slugify(classData.className)}`;
 
         const created = await subjectClassRepository.create({
             subjectId: value.subjectId,
@@ -39,6 +41,8 @@ const subjectClassService = {
             academicYearId: value.academicYearId,
             subjectClassCode: subjectClassCode
         });
+
+        folderHelper.createSubjectFolder(classData.schoolId, classData.id, subject.id);
 
         return created;
     },
@@ -51,8 +55,21 @@ const subjectClassService = {
         return await subjectClassRepository.findByClassId(Number(classId));
     },
 
-    getSubjectClassesByTeacher: async (teacherId) => {
-        return await subjectClassRepository.findByTeacherId(Number(teacherId));
+    getSubjectClassesByTeacher: async (teacherId, currentUser) => {
+        const teacher = await userRepository.findUserById(teacherId);
+        console.log("Teacher from DB:", teacher); 
+
+        if (!teacher || teacher.role !== "Teacher") {
+            throwError(403, "This user is not a teacher");
+        }
+
+        const subjectClasses = await subjectClassRepository.findByTeacherId(Number(teacherId));
+
+        if(!subjectClasses || subjectClasses.length === 0) {
+            throwError(404, "No subject-classes found for this teacher");
+        }
+
+        return subjectClasses;
     },
 
     findBySubjectAndClass: async (subjectId, classId) => {

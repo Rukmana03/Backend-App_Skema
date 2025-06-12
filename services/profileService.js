@@ -12,7 +12,7 @@ const profileService = {
 
         if (identityNumber) {
             const duplicateIdentity = await profileRepository.getProfileByIdentityNumber(identityNumber);
-            if (duplicateIdentity) throwError(409, "Nomor identitas sudah digunakan.");
+            if (duplicateIdentity) throwError(409, "The identity number has been used.");
         }
 
         const profile = await profileRepository.createProfile({
@@ -40,7 +40,7 @@ const profileService = {
             const existingByIdentity = await profileRepository.getProfileByIdentityNumber(data.identityNumber);
 
             if (existingByIdentity && existingByIdentity.userId !== userId) {
-                throwError(400, "Nomor identitas sudah digunakan oleh pengguna lain.");
+                throwError(400, "The identity number has been used by other users.");
             }
         }
 
@@ -78,7 +78,6 @@ const profileService = {
         targetUserId = Number(targetUserId);
         if (isNaN(targetUserId)) throwError(400, "Invalid user ID.");
 
-        // Pastikan user hanya bisa melihat profilnya sendiri
         if (requestingUserId !== targetUserId) {
             throwError(403, "You can only access your own profile.");
         }

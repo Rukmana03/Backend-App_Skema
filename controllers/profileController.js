@@ -4,7 +4,7 @@ const { successResponse, errorResponse } = require("../utils/responseHandler");
 const profileController = {
     createProfile: async (req, res) => {
         try {
-            const userId = req.user.id; // ✅ Ambil userId dari token
+            const userId = req.user.id; 
             const { name, identityNumber, bio, profilePhoto } = req.body;
 
             const profile = await profileService.createProfile({ userId, name, identityNumber, bio, profilePhoto });

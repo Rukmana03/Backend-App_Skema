@@ -28,7 +28,7 @@ paths:
                 - password
       responses:
         '200':
-          description: Login berhasil
+          description: Successful login
           content:
             application/json:
               schema:
@@ -121,19 +121,19 @@ paths:
                       type: string
                 examples:
                   missingToken:
-                    summary: Refresh token tidak diberikan
+                    summary: The token refresh is not given
                     value:
-                      message: Refresh token required
+                      message: refreshTokenRequired
                   invalidToken:
-                    summary: Refresh token tidak valid
+                    summary: Invalid token refresh
                     value:
                       message: Refresh token is invalid
                   expiredToken:
-                    summary: Refresh token kedaluwarsa
+                    summary: Refresh token expired
                     value:
                       message: Refresh token is invalid or expired
                   limitReached:
-                    summary: Batas percobaan refresh token tercapai
+                    summary: The Token Refresh Experiment Limit was achieved
                     value:
                       message: Refresh token limit reached. Please login again
           '500':

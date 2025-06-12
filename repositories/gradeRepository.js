@@ -27,7 +27,8 @@ const gradeRepository = {
     },
 
     getGradeBySubmissionId: async (submissionId) => {
-        return await prisma.grade.findUnique({
+        console.log("Debug submissionId in getGradeBySubmissionId:", submissionId);
+        return await prisma.grade.findFirst({
             where: { submissionId: Number(submissionId) },
             include: {
                 teacher: { select: { id: true, username: true } },
@@ -58,15 +59,21 @@ const gradeRepository = {
     getGradesByClassId: async (classId) => {
         return await prisma.grade.findMany({
             where: {
-                submission: {
-                    assignment: { classId: Number(classId) },
-                },
+                submission: { assignment: { subjectClass: { classId: classId } } }
             },
             include: {
                 submission: {
-                    include: { student: { select: { id: true, username: true } } },
+                    include: {
+                        student: { select: { id: true, username: true } },
+                        assignment: { select: { title: true, assignmentType: true } }
+                    }
                 },
-                teacher: { select: { id: true, username: true } },
+                teacher: {
+                    select: {
+                        id: true,
+                        username: true
+                    }
+                }
             },
         });
     },

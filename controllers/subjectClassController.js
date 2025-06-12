@@ -31,8 +31,12 @@ const subjectClassController = {
 
     getSubjectClassesByTeacher: async (req, res) => {
         try {
-            const result = await subjectClassService.getSubjectClassesByTeacher(req.params.teacherId);
-            return successResponse(res, 200, "Subject-classes for teacher retrieved", result);
+            const teacherId = Number(req.params.teacherId);
+            const currentUser = req.user;
+
+            const subjectClasses = await subjectClassService.getSubjectClassesByTeacher(teacherId, currentUser);
+
+            return successResponse(res, 200, "Subject-classes for teacher retrieved", subjectClasses);
         } catch (error) {
             return errorResponse(res, error.statusCode || 500, error.message);
         }

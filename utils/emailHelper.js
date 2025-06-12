@@ -16,9 +16,9 @@ const sendResetPasswordEmail = async (to, token) => {
         subject: "Reset Password",
         html: `
       <p>Halo,</p>
-      <p>Klik link berikut untuk mengatur ulang password kamu:</p>
+      <p>Click the following link to reset your password:</p>
       <a href="${resetLink}">${resetLink}</a>
-      <p>Link ini akan kadaluarsa dalam 15 menit.</p>
+      <p>This link will expire in 15 minutes.</p>
     `,
     };
 

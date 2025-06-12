@@ -52,8 +52,6 @@ const studentClassService = {
 
         const activeClass = await studentClassRepository.getActiveStudentClass(studentId);
         if (!activeClass.length) throwError(400, "Student not found in any active classes");
-
-        // Ambil academicYearId dari data aktif
         const academicYearId = activeClass[0].academicYearId;
 
         const newClass = await classRepository.getClassById(newClassId);
@@ -61,13 +59,11 @@ const studentClassService = {
             throwError(400, "Destination class is inactive or not found");
         }
 
-        // Nonaktifkan kelas lama
         const updated = await studentClassRepository.updateClassStatus(studentId, academicYearId, "Transferred");
         if (updated.count === 0) {
             throwError(400, "Failed to deactivate old class data");
         }
 
-        // Tambahkan ke kelas baru
         const result = await studentClassRepository.addStudentToClass({
             classId: newClassId,
             studentId,
@@ -85,21 +81,50 @@ const studentClassService = {
         if (!students.length) throwError(404, "There are no active students in this class");
 
         return students.map((sc) => ({
-            id: sc.Student.id,
-            username: sc.Student.username,
-            email: sc.Student.email,
+            id: sc.student.id,
+            username: sc.student.username,
+            email: sc.student.email,
+            status: sc.classStatus
         }));
     },
 
     promoteStudentsToClass: async (data) => {
         const { error } = promoteStudentsSchema.validate(data);
         if (error) throwError(400, error.details[0].message);
-
+    
         const { studentIds, newClassId, academicYearId } = data;
 
+        console.log("Incoming academicYearId for promotion:", academicYearId);
+        console.log("Incoming student IDs for promotion:", studentIds);
+        console.log("Incoming newClassId for promotion:", newClassId);
+
         const newClass = await classRepository.getClassById(newClassId);
-        if (!newClass || newClass.status !== "Active") {
+
+        if (!newClass || newClass.status !== "Active") {    
             throwError(400, "Destination class is inactive or not found");
+        }
+
+        console.log("New class data:", newClass);
+        console.log("New class academicYearId:", newClass.academicYearId);
+
+        const currentClasses = await studentClassRepository.getActiveStudentClass(studentIds[0]);
+        const currentClass = currentClasses[0];
+
+        if (!currentClass) {
+            console.log("No active class found for student ID", studentIds[0]);
+            throwError(400, "No active class found for student");
+        }
+
+        console.log("Current class ID for student:", currentClass.classId);
+        console.log("Current class academicYearId:", currentClass.academicYearId);
+
+        if(newClass.academicYearId === currentClass.academicYearId) {
+            console.log("Student cannot be promoted to the same academic year.");
+            throwError(400, "Student must be promoted to a different academic year");
+        }
+
+        if (newClassId <= currentClass.classId) {
+            throwError(400, "Student cannot be promoted to a lower class");
         }
 
         const results = [];
@@ -112,34 +137,40 @@ const studentClassService = {
 
             const activeClasses = await studentClassRepository.getActiveStudentClass(studentId);
 
-            // Periksa apakah siswa sudah ada di kelas baru
+            console.log("Active classes for student ID:", studentId);
+            console.log("Active classes data:", activeClasses);
+
             const alreadyInClass = activeClasses.some((activeClass) => activeClass.classId === newClassId);
             if (alreadyInClass) {
                 throwError(400, `Students with ID ${studentId} already in this class`);
             }
+            const currentActive = activeClasses.find(ac => ac.classStatus === "Active");
 
-            // Update status kelas lama jika belum dipromosikan
+            if(!currentActive){
+                throwError(400, `Students with ID ${studentId} has not active class`);
+            }
+            console.log("Current Active Class Academic Year:", currentActive.academicYearId);
+
+            if(currentActive.academicYear.id === newClass.academicYearId){
+                throwError(400, `Student with ID ${studentId} must be promoted to a different academic year`);
+            }
+    
             for (const active of activeClasses) {
                 if (active.classStatus !== "Promoted") {
                     await studentClassRepository.updateClassStatus(studentId, active.academicYearId, "Promoted");
                 }
             }
 
-            // Tambahkan siswa ke kelas baru di tahun ajaran baru
             const newRecord = await studentClassRepository.addStudentToClass({
                 classId: newClassId,
                 studentId,
                 academicYearId,
                 classStatus: "Active",
             });
-
             results.push(newRecord);
         }
 
-        return {
-            message: "Semua siswa berhasil dipromosikan ke kelas baru",
-            data: results,
-        };
+        return results;
     },
 
 };

@@ -1,65 +1,65 @@
 const path = require("path");
 const { throwError } = require("../utils/responseHandler");
-const { addFileToAssignmentSchema } = require("../validations/fileStorageValidation");
+const { addManyFilesSchema } = require("../validations/fileStorageValidation");
 const fileStorageRepository = require("../repositories/fileStorageRepository");
 const assignmentRepository = require("../repositories/assignmentRepository");
 const submissionRepository = require("../repositories/submissionRepository");
-const classRepository = require("../repositories/classRepository"); 
+const folderHelper = require("../utils/folderHelper");
+const classRepository = require("../repositories/classRepository");
 const fs = require("fs");
 
 
 const fileStorageService = {
-    addFilesToAssignment: async (payload) => {
-        const { userId, assignmentId, schoolId, classId, subjectId, files } = payload;
+    addFilesToAssignment: async (assignmentIdRaw, currentUser, files) => {
+        const assignmentId = Number(assignmentIdRaw);
+        const userId = Number(currentUser.id);
 
-        // 🔹 Validasi presence
-        if (!assignmentId || !schoolId || !classId || !subjectId) {
-            throwError(400, "assignmentId, schoolId, classId, dan subjectId harus disertakan!");
+        if (!assignmentId || !userId) {
+            throwError(400, "AssignmentId must be filled in and the user must log in");
         }
 
-        if (!files || files.length === 0) {
-            throwError(400, "Minimal 1 file harus diunggah!");
+        const assignment = await assignmentRepository.getAssignmentById(assignmentId);
+        if (!assignment) throwError(404, "Assignment is not found");
+
+        const subjectClass = await submissionRepository.getSubjectClassByAssignmentId(assignmentId)
+        if (!subjectClass || !subjectClass.class) {
+            throwError(400, "Class or subject does not exist");
         }
 
-        // 🔹 Pastikan assignment valid
-        const assignment = await assignmentRepository.getAssignmentById(Number(assignmentId));
-        if (!assignment) throwError(404, "Assignment tidak ditemukan.");
+        const classId = subjectClass.class.id;
+        const schoolId = subjectClass.class.schoolId;
+        const subjectId = subjectClass.subjectId;
 
-        // 🔹 Proses semua file
+        const assignmentFolderPath = folderHelper.createAssignmentFolder(
+            schoolId, classId, subjectId,
+        );
+        console.log("[UPLOAD] Path from createAssignmentFolder:", assignmentFolderPath);
+        folderHelper.createFolderIfNotExists(assignmentFolderPath);
+
         const savedFiles = [];
 
-        for (const file of files) {
-            try {
-                const correctFilePath = path.join(
-                    `uploads/school-${schoolId}/class-${classId}/subject-${subjectId}/assignment-${assignmentId}`,
-                    file.filename
-                );
-
-                const fileData = {
-                    userId,
-                    assignmentId: Number(assignmentId),
+        if (files && files.length > 0) {
+            const fileStorages = files.map((file) => {
+                const filePrefix = 'assignment_';
+                return {
+                    userId: userId,
                     fileName: file.originalname,
-                    fileUrl: correctFilePath,
+                    fileUrl: `${assignmentFolderPath}/${filePrefix}${file.filename}`,
+                    fileType: "Assignment",
+                    assignmentId: assignmentId,
+                    uploadDate: new Date(),
                 };
-
-                // 🔸 Validasi skema file
-                const { error } = addFileToAssignmentSchema.validate(fileData);
-                if (error) throwError(400, error.details[0].message);
-
-                // 🔸 Simpan file
-                const saved = await fileStorageRepository.createFile({
-                    userId,
-                    fileName: file.originalname,
-                    fileUrl: correctFilePath,
-                });
-
-                // 🔸 Link ke assignment
-                await fileStorageRepository.linkFileToAssignment(saved.id, assignmentId);
-
-                savedFiles.push(saved);
-            } catch (err) {
-                console.error(`[ERROR] Gagal memproses file ${file.originalname}:`, err.message);
+            });
+            const { error } = addManyFilesSchema.validate(fileStorages);
+            if (error) {
+                console.error("Validation error:", error.details);
+                throwError(400, error.details[0].message);
             }
+
+            await fileStorageRepository.createManyFiles(fileStorages);
+            savedFiles.push(...fileStorages);
+        } else {
+            throwError(400, "At least 1 file must be uploaded!");
         }
 
         return savedFiles;
@@ -67,59 +67,41 @@ const fileStorageService = {
 
     downloadFile: async (fileId, user) => {
         const file = await fileStorageRepository.getFileById(fileId);
-        if (!file) throwError(404, "File tidak ditemukan.");
+        if (!file) throwError(404, "Files are not found");
 
         let isAuthorized = false;
         let filePath = file.fileUrl;
 
-        // === CASE 1: Assignment File ===
-        if (file.AssignmentFile?.assignmentId) {
-            const assignment = await assignmentRepository.getAssignmentById(file.AssignmentFile.assignmentId);
-            if (!assignment) throwError(404, "Assignment tidak ditemukan.");
+        if (file.assignmentId) {
+            const assignment = await assignmentRepository.getAssignmentById(file.assignmentId);
+            if (!assignment) throwError(404, "Assignment not found.");
 
-            const subjectClass = await classRepository.getSubjectClassById(assignment.subjectClassId);
-            if (!subjectClass) throwError(404, "SubjectClass tidak ditemukan.");
+            const subjectClass = await classRepository.getSubjectClassById(assignment.subjectClass.id);
+            if (!subjectClass) throwError(404, "SubjectClass not found.");
 
-            // Teacher pemilik subjectClass
-            if (user.role === "Teacher" && subjectClass.teacherId === user.id) {
-                isAuthorized = true;
-            }
-
-            // Student yang tergabung di class terkait
+            if (user.role === "Teacher" && subjectClass.teacherId === user.id) { isAuthorized = true; }
             if (user.role === "Student") {
                 const studentInClass = await classRepository.findStudentInClass(user.id, subjectClass.classId);
                 if (studentInClass) isAuthorized = true;
             }
         }
 
-        // === CASE 2: Submission File ===
-        else if (file.SubmissionFile?.submissionId) {
-            const submission = await submissionRepository.getById(file.SubmissionFile.submissionId);
-            if (!submission) throwError(404, "Submission tidak ditemukan.");
-
+        else if (file.submissionId) {
+            const submission = await submissionRepository.getById(file.file.submissionId);
+            if (!submission) throwError(404, "Submission not found.");
             const assignment = await assignmentRepository.getAssignmentById(submission.assignmentId);
-            if (!assignment) throwError(404, "Assignment tidak ditemukan.");
+            if (!assignment) throwError(404, "Assignment not found.");
+            const subjectClass = await classRepository.getSubjectClassById(assignment.subjectClass.id);
+            if (!subjectClass) throwError(404, "SubjectClass not found.");
 
-            const subjectClass = await classRepository.getSubjectClassById(assignment.subjectClassId);
-            if (!subjectClass) throwError(404, "SubjectClass tidak ditemukan.");
-
-            // Student yang mengirim submission
-            if (user.role === "Student" && submission.studentId === user.id) {
-                isAuthorized = true;
-            }
-
-            // Teacher pengampu subjectClass
-            if (user.role === "Teacher" && subjectClass.teacherId === user.id) {
-                isAuthorized = true;
-            }
+            if (user.role === "Student" && submission.studentId === user.id) { isAuthorized = true; }
+            if (user.role === "Teacher" && subjectClass.teacherId === user.id) { isAuthorized = true; }
         }
 
-        // Jika tidak authorized
-        if (!isAuthorized) throwError(403, "Kamu tidak punya akses ke file ini.");
+        if (!isAuthorized) throwError(403, "You don't have access to this file.");
 
-        // Cek file fisik
         const absolutePath = path.resolve(filePath);
-        if (!fs.existsSync(absolutePath)) throwError(404, "File fisik tidak ditemukan.");
+        if (!fs.existsSync(absolutePath)) throwError(404, "Physical files are not found.");
 
         return {
             fileName: file.fileName,
@@ -128,18 +110,24 @@ const fileStorageService = {
     },
 
     getFilesByAssignment: async (assignmentId) => {
-        return await fileStorageRepository.getFilesByAssignment(assignmentId);
+        const files = await fileStorageRepository.getFilesByAssignment(assignmentId);
+        if (!files) throwError(404, "No files found for this assignment.");
+        return files;
     },
 
     getFilesBySubmission: async (submissionId) => {
-        return await fileStorageRepository.getFilesBySubmission(submissionId);
+        const files = await fileStorageRepository.getFilesBySubmission(submissionId);
+        if (!files) throwError(404, "No files found for the given submission.");
+        return files;
     },
 
     deleteFile: async (fileId) => {
         const file = await fileStorageRepository.getFileById(fileId);
-        if (!file) throwError(404, "File tidak ditemukan.");
+        if (!file) throwError(404, "File not found.");
+
+        const filePath = path.resolve(file.fileUrl);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
         await fileStorageRepository.deleteFile(fileId);
-        return { message: "File berhasil dihapus." };
     },
 };
 

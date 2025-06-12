@@ -54,8 +54,12 @@ const userRepository = {
         username: true,
         email: true,
         password: true,
-        role: true,
-        refreshToken: true,
+        role:{
+          select:{
+            id: true,
+            name: true
+          },
+        },
       },
     });
   },

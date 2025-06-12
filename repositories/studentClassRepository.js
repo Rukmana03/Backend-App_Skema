@@ -5,9 +5,21 @@ const studentClassRepository = {
     addStudentToClass: async ({ classId, studentId, academicYearId, classStatus = "Active" }) => {
         return await prisma.studentClass.create({
             data: {
-                classId: Number(classId),
-                studentId: Number(studentId),
-                academicYearId: Number(academicYearId),
+                class: {  
+                    connect: {
+                        id: Number(classId), 
+                    }
+                },
+                academicYear: {
+                    connect: {
+                        id: Number(academicYearId),
+                    }
+                },
+                student: {  
+                    connect: {
+                        id: Number(studentId), 
+                    }
+                },
                 classStatus,
             },
         });
@@ -34,7 +46,7 @@ const studentClassRepository = {
     getActiveStudentClass: async (studentId) => {
         return await prisma.studentClass.findMany({
             where: { studentId: Number(studentId), classStatus: "Active" },
-            include: { Class: true, AcademicYear: true }
+            include: { class: true, academicYear: true }
         });
     },
 
@@ -42,12 +54,16 @@ const studentClassRepository = {
         return await prisma.studentClass.findMany({
             where: {
                 classId: Number(classId),
-                Student: {
+                classStatus: {
+                    in: ["Active", "DroppedOut", "Promoted", "Transferred", "Graduated"]
+
+                },
+                student: {
                     role: "Student",
                 },
             },
             include: {
-                Student:{
+                student: {
                     select: {
                         id: true,
                         username: true,
@@ -84,7 +100,7 @@ const studentClassRepository = {
             where: {
                 studentId: Number(studentId),
                 academicYearId: Number(academicYearId),
-                classStatus: "Transferred", 
+                classStatus: "Transferred",
             },
             data: {
                 classId: Number(newClassId),
@@ -92,6 +108,6 @@ const studentClassRepository = {
             },
         });
     },
-    
+
 };
 module.exports = studentClassRepository;

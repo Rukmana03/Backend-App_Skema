@@ -4,31 +4,74 @@ const path = require("path");
 const createFolderIfNotExists = (folderPath) => {
     if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
-        console.log(`[INFO] Folder dibuat: ${folderPath}`);
+        console.log(`[INFO] Folders are made: ${folderPath}`);
     }
 };
 
-const createDynamicFolder = (...segments) => {
-    const folderPath = path.join("uploads","File Data", ...segments);
+const getFileDataFolder = () => {
+    const folderPath = path.join("Uploads", "File Data");
     createFolderIfNotExists(folderPath);
-    return folderPath; 
+    return folderPath;
+};
+
+const createDynamicFolder = (...segments) => {
+    const folderPath = path.join("Uploads", "File Data", ...segments);
+    createFolderIfNotExists(folderPath);
+    return folderPath;
 };
 
 const folderHelper = {
-    createSchoolFolder: () => createDynamicFolder(),
-    createDynamicFolderType: (type, schoolId, classId, subjectId, assignmentId, submissionId = null ) => {
+    getFileDataFolder,
+
+    createSchoolFolder: (schoolId) => {
+        return createDynamicFolder(
+            `school-${schoolId}`,
+        );
+    },
+
+    createClassFolder: (schoolId, classId) => {
+        return createDynamicFolder(
+            `school-${schoolId}`,
+            `class-${classId}`,
+        );
+    },
+
+    createSubjectFolder: (schoolId, classId, subjectId) => {
+        return createDynamicFolder(
+            `school-${schoolId}`,
+            `class-${classId}`,
+            `subject-${subjectId}`,
+        );
+    },
+
+    createAssignmentFolder: (schoolId, classId, subjectId) => {
+        return createDynamicFolder(
+            `school-${schoolId}`,
+            `class-${classId}`,
+            `subject-${subjectId}`,
+            "assignment"
+        );
+    },
+
+    createSubmissionFolder: (schoolId, classId, subjectId) => {
+        return createDynamicFolder(
+            `school-${schoolId}`,
+            `class-${classId}`,
+            `subject-${subjectId}`,
+            "submission"
+        );
+    },
+
+    createDynamicFolderType: (type, schoolId, classId, subjectId) => {
         const parts = [
             `school-${schoolId}`,
             `class-${classId}`,
             `subject-${subjectId}`,
-            `assignment-${assignmentId}`
+            type === "assignment" ? "assignment" : "submission"
         ];
-        if (type === "submission" && submissionId) {
-            parts.push(`submission-${submissionId}`);
-        }
         return createDynamicFolder(...parts);
-    }
+    },
+    createFolderIfNotExists,
 };
 
 module.exports = folderHelper;
- 

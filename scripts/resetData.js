@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 async function resetData() {
     try {
-        // 1. Hapus semua data (urutan penting!)
+      
         await prisma.assignmentFile.deleteMany();
         await prisma.submissionFile.deleteMany();
         await prisma.fileStorage.deleteMany();
@@ -43,7 +43,7 @@ async function resetData() {
             await prisma.$executeRawUnsafe(`ALTER SEQUENCE "${seq}" RESTART WITH 1`);
         }
 
-        console.log("✅ Semua data dihapus dan sequence ID disetel ulang ke 1.");
+        console.log("✅ All data is deleted and the sequence id is reinstated to 1.");
     } catch (err) {
         console.error("❌ Error:", err);
     } finally {

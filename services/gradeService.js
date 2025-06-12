@@ -6,37 +6,38 @@ const { throwError } = require("../utils/responseHandler");
 
 const gradeService = {
     createGrade: async ({ submissionId, teacherId, score, feedback }) => {
-        const { error } = createGradeSchema.validate({ submissionId, teacherId, score, feedback });
+        console.log("Validating grade:", { submissionId, score, feedback });
+        const { error } = createGradeSchema.validate({ submissionId, score, feedback });
         if (error) throwError(400, error.details[0].message);
 
         const submission = await submissionRepository.getSubmissionById(submissionId);
-        if (!submission) throwError(404, "Submission tidak ditemukan.");
+        if (!submission) throwError(404, "Submission is not found.");
 
         if (!submission.assignment || submission.assignment.teacherId !== teacherId) {
-            throwError(403, "Anda hanya dapat memberi nilai untuk submission pada tugas Anda sendiri.");
+            throwError(403, "You can only give value to submissions on your own task.");
         }
 
         const existingGrade = await gradeRepository.getGradeBySubmissionId(submissionId);
-        if (existingGrade) throwError(400, "Submission ini sudah dinilai sebelumnya.");
+        if (existingGrade) throwError(400, "This submission has been assessed beforehand.");
 
         if (submission.status !== "Submitted") {
-            throwError(400, "Submission harus memiliki status 'Submitted' untuk dinilai.");
+            throwError(400, "Submission must have a 'submitted' status to be assessed.");
         }
 
         const newGrade = await gradeRepository.createGrade({ submissionId, teacherId, score, feedback });
         await submissionRepository.updateSubmissionStatus(submissionId, "Graded");
 
-        await notificationService.sendNotification(
-            submission.studentId,
-            `Tugas Anda telah dinilai dengan skor ${score}.`
-        );
-
+        await notificationService.sendNotification({
+            userId: submission.studentId,
+            message: `Your task has been valued in the score ${score}.`
+        });
+        console.log("Student sent notif", submission.studentId);
         return newGrade;
     },
 
     getGradeBySubmissionId: async (submissionId) => {
         const grade = await gradeRepository.getGradeBySubmissionId(submissionId);
-        if (!grade) throwError(404, "Grade tidak ditemukan.");
+        if (!grade) throwError(404, "Grade is not found.");
         return {
             id: grade.id,
             score: grade.score,
@@ -50,7 +51,7 @@ const gradeService = {
         if (error) throwError(400, error.details[0].message);
 
         const existingGrade = await gradeRepository.getGradeById(gradeId);
-        if (!existingGrade) throwError(404, "Grade tidak ditemukan.");
+        if (!existingGrade) throwError(404, "Grade is not found.");
 
         const updatedGrade = await gradeRepository.updateGrade(gradeId, { score, feedback });
         await submissionRepository.updateSubmissionStatus(existingGrade.submissionId, "Graded");
@@ -59,8 +60,13 @@ const gradeService = {
     },
 
     deleteGrade: async (gradeId) => {
+        const grade = await gradeRepository.getGradeById(gradeId);
+        if (!grade) {
+            throwError(404, "Grade not found");
+        }
+        await submissionRepository.updateSubmissionStatus(grade.submissionId, "Submitted");
         await gradeRepository.deleteGrade(gradeId);
-        return { message: "Grade berhasil dihapus." };
+        return ;
     },
 
     getGradesByClassId: async (classId) => {

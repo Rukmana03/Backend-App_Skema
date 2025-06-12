@@ -23,6 +23,7 @@ const assignmentController = {
     getAssignmentById: async (req, res) => {
         try {
             const assignment = await assignmentService.getAssignmentById(req.params.id);
+            console.log("[DEBUG] Assignment Data:", assignment);
             return successResponse(res, 200, "Task details retrieved successfully", assignment);
         } catch (error) {
             return errorResponse(res, error.status || 500, error.message || "Internal server error");

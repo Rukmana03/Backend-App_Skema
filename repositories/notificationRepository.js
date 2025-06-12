@@ -29,6 +29,19 @@ const notificationRepository = {
         });
     },
 
+    async getById(notificationId) {
+        return prisma.notification.findUnique({
+            where: { id: notificationId },
+            select: {
+                id: true,
+                userId: true,
+                message: true,
+                status: true,
+                sentDate: true,
+            },
+        });
+    },
+
     async markAsRead(notificationId) {
         return prisma.notification.update({
             where: { id: notificationId },

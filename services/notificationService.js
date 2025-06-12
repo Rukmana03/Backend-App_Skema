@@ -16,11 +16,19 @@ const notificationService = {
         return await notificationRepository.getNotificationsByUser(userId);
     },
 
-    markNotificationAsRead: async (notificationId) => {
+    getNotificationById: async (notificationId) => {
         const { error } = notificationIdSchema.validate({ notificationId });
         if (error) throwError(400, error.details[0].message);
 
-        return await notificationRepository.markAsRead(notificationId);
+        const notification = await notificationRepository.getById(notificationId);
+        if (!notification) throwError(404, "Notification is not found");
+
+        if (notification.status !== "Read") {
+            await notificationRepository.markAsRead(notificationId);
+            notification.status = "Read";
+        }
+
+        return notification;
     },
 
     deleteNotification: async (notificationId) => {

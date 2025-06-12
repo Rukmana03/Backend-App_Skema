@@ -17,7 +17,7 @@ const notificationController = {
 
     getUserNotifications: async (req, res) => {
         try {
-            const userId = Number(req.params.userId);
+            const userId = req.user.id;
             const notifications = await notificationService.getUserNotifications(userId);
             return successResponse(res, 200, "Notification successfully retrieved", notifications);
         } catch (error) {
@@ -25,14 +25,11 @@ const notificationController = {
         }
     },
 
-    markNotificationAsRead: async (req, res) => {
+    getNotificationById: async (req, res) => {
         try {
             const { id } = req.params;
-            if (!id) {
-                return errorResponse(res, 400, "notificationId required");
-            }
-            const response = await notificationService.markNotificationAsRead(parseInt(id));
-            return successResponse(res, 200, "Notifications are marked as read", response);
+            const notification = await notificationService.getNotificationById(Number(id));
+            return successResponse(res, 200, "Notification was successfully taken", notification);
         } catch (error) {
             return errorResponse(res, error.status || 500, error.message || "Internal server error");
         }
@@ -44,7 +41,7 @@ const notificationController = {
             if (!id) {
                 return errorResponse(res, 400, "notificationId required");
             }
-            await notificationService.deleteNotification(parseInt(id));
+            await notificationService.deleteNotification(Number(id));
             return successResponse(res, 200, "Notification successfully deleted");
         } catch (error) {
             return errorResponse(res, error.status || 500, error.message || "Internal server error");

@@ -17,7 +17,7 @@ const subjectService = {
 
     getAllSubjects: async () => {
         const subjects = await subjectRepository.getAllSubjects();
-        if (!subjects.length) { 
+        if (!subjects.length) {
             throwError(400, "No subjects found");
         }
 
@@ -26,7 +26,7 @@ const subjectService = {
             subjectName: sj.subjectName,
             subjectClasses: sj.subjectClasses
         }));
-        
+
     },
 
     getSubjectById: async (id) => {

@@ -1,10 +1,15 @@
 const Joi = require("joi");
 
-const addFileToAssignmentSchema = Joi.object({
+const fileItemSchema = Joi.object({
     userId: Joi.number().required(),
-    assignmentId: Joi.number().required(),
     fileName: Joi.string().required(),
-    fileUrl: Joi.string().uri().required()
+    fileUrl: Joi.string().required(),
+    fileType: Joi.string().valid('Submission', 'Assignment').required(),
+    submissionId: Joi.number().allow(null).optional(),
+    assignmentId: Joi.number().required(),
+    uploadDate: Joi.date().required()
 });
 
-module.exports = { addFileToAssignmentSchema };
+const addManyFilesSchema = Joi.array().items(fileItemSchema);
+
+module.exports = { addManyFilesSchema };

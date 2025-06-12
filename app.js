@@ -40,7 +40,7 @@ app.use("/api/subject-class", subjectClassRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/submissions", submissionRoutes);
 app.use("/api/grades", gradeRoutes);
-app.use("/api/comment", commentRoutes);
+app.use("/api/comments", commentRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/files", fileStorageRoutes);
 

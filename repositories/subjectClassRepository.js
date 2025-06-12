@@ -68,9 +68,7 @@ const subjectClassRepository = {
                 class: {
                     include: {
                         studentClasses: {
-                            where: {
-                                classStatus: 'Active',
-                            },
+                            where: { classStatus: 'Active' },
                             include: {
                                 student: true,
                             }
@@ -93,7 +91,8 @@ const subjectClassRepository = {
             select: {
                 id: true,
                 teacher: {
-                    select: {
+                    select:{ 
+                        role: true,
                         profile: {
                             select: { name: true, },
                         },

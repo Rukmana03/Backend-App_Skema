@@ -13,14 +13,12 @@ const userService = {
 
     const { username, email, password, role, name, identityNumber, bio, profilePhoto } = userData;
 
-    // Cek apakah email sudah terdaftar
     const existingUser = await userRepository.findUserByEmail(email);
     if (existingUser) throwError(400, "Email is already registered.");
 
     const hashedPassword = await hashPassword(password);
     const newUser = await userRepository.createUser(username, email, hashedPassword, role);
 
-    // Buat profil hanya jika ada data profil yang diberikan
     let profile = null;
     if (name || identityNumber || bio || profilePhoto) {
       profile = await profileRepository.createProfile({
@@ -41,7 +39,6 @@ const userService = {
     const user = await userRepository.findUserById(id);
     if (!user) throwError(404, "User not found.");
 
-    // Cek apakah email baru sudah digunakan oleh user lain
     if (updateData.email) {
       const emailExists = await userRepository.findUserByEmail(updateData.email);
       if (emailExists && emailExists.id !== id) {
