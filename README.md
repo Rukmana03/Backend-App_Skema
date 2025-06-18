@@ -12,7 +12,7 @@ Aplikasi dirancang secara modular dengan pendekatan clean architecture agar muda
 - **Multer** – Middleware untuk menangani file upload
 - **node-cron** – Scheduler untuk menjalankan tugas otomatis
 - **dotenv** – Manajemen konfigurasi environment
-- **Joi / Zod** – Validasi skema data (jika digunakan)
+- **Joi / Zod** – Validasi skema data 
 
 ### 🧩 Fitur Utama
 - CRUD data entitas seperti:
@@ -24,7 +24,7 @@ Aplikasi dirancang secara modular dengan pendekatan clean architecture agar muda
 - Autentikasi pengguna menggunakan JSON Web Token (JWT)
 - Upload file dengan penyimpanan lokal melalui Multer
 - Middleware untuk validasi request dan otorisasi akses
-- Penjadwalan proses otomatis menggunakan `node-cron` (contoh: pembersihan data, pengingat)
+- Penjadwalan proses otomatis menggunakan `node-cron` 
 - Arsitektur repository pattern dengan Prisma untuk akses data yang bersih dan reusable
 - Struktur respons API yang konsisten dengan standar JSON
 
